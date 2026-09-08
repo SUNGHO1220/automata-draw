@@ -138,8 +138,6 @@
 </style>
 </head>
 <body>
-
-
 <div class="page">
 <div class="sheet"><div class="sheet-inner">
 
@@ -152,7 +150,7 @@
     <div class="meta-row">
       <div class="meta-chip"><span>용지</span><strong>A1</strong></div>
       <div class="meta-chip"><span>저장 형식</span><strong>PNG</strong></div>
-      <div class="meta-chip"><span>도구</span><strong>9종</strong></div>
+      <div class="meta-chip"><span>도구</span><strong>12종</strong></div>
       <div class="meta-chip"><span>단위</span><strong>mm</strong></div>
     </div>
   </header>
@@ -184,6 +182,9 @@
           <button class="tool-btn" data-tool="circle" type="button">원</button>
           <button class="tool-btn" data-tool="gear" type="button">기어</button>
           <button class="tool-btn" data-tool="cam" type="button">캠</button>
+          <button class="tool-btn" data-tool="shaft" type="button">축</button>
+          <button class="tool-btn" data-tool="pin" type="button">핀</button>
+          <button class="tool-btn" data-tool="crank" type="button">크랭크축</button>
           <button class="tool-btn" data-tool="eraser" type="button">지우개</button>
           <button class="tool-btn" data-tool="select" type="button">선택(이동)</button>
         </div>
@@ -195,6 +196,13 @@
           <button class="tool-btn cam-profile-btn" data-profile="snail" type="button">달팽이형(등속)</button>
           <button class="tool-btn cam-profile-btn" data-profile="heart" type="button">하트형(왕복)</button>
           <button class="tool-btn cam-profile-btn" data-profile="pear" type="button">배형(볼록)</button>
+        </div>
+      </div>
+      <div class="tool-row" id="gearTypeRow" hidden>
+        <div class="tool-group">
+          <span class="tool-group-label">기어 종류</span>
+          <button class="tool-btn gear-type-btn active" data-geartype="toothed" type="button">톱니바퀴(기본)</button>
+          <button class="tool-btn gear-type-btn" data-geartype="pegwheel" type="button">막대꽂이(핀휠)</button>
         </div>
       </div>
       <div class="tool-row">
@@ -224,14 +232,6 @@
           <button class="thick-btn zoom-btn" data-zoom="800" type="button">800%</button>
         </div>
       </div>
-      <p class="tool-hint">Tip: 지름 3mm 축처럼 아주 작은 부품은 <strong class="mono">화면 확대</strong>를 400~800%로 높이고 굵기를 <strong class="mono">매우 얇게</strong>로 선택해서 그리면 정확하게 그릴 수 있습니다. 확대해도 치수(mm) 값은 실제 크기 그대로 표시됩니다.</p>
-      <p class="tool-hint">Tip: 직선·사각형 도구를 쓸 때 <strong class="mono">Shift</strong> 키를 누른 채 그리면 수평·수직·45˚(사각형은 정사각형)로 반듯하게 그려집니다. 지우개로 드래그하면 그 부분만 지워집니다.</p>
-      <p class="tool-hint">Tip: 선택(이동) 도구로 그려둔 도형을 클릭하면 드래그로 위치를 옮기거나, 아래 표에 정확한 수치(mm)를 입력해 크기·위치를 고칠 수 있습니다.</p>
-      <p class="tool-hint">Tip: <strong class="mono">치수선</strong> 도구로 가로·세로를 그으면 화살표와 함께 실제 길이(mm)가 자동으로 표시됩니다. 치수선을 더블클릭하면 바로 선택되면서 표시할 숫자를 입력할 수 있는 칸이 활성화됩니다.</p>
-      <p class="tool-hint">Tip: <strong class="mono">기어</strong> 도구는 중심에서 바깥으로 드래그하면 톱니바퀴가 그려집니다. 선택(이동) 도구로 빈 곳에서 드래그하면 여러 도형을 한 번에 선택해 옮길 수 있습니다.</p>
-      <p class="tool-hint">Tip: 도형을 하나 선택하면 모서리에 작은 사각형 손잡이가 나타납니다. 손잡이를 마우스로 드래그하면 크기를 조절할 수 있어요. 선택한 도형은 <strong class="mono">Ctrl+C</strong>로 복사하고 <strong class="mono">Ctrl+V</strong>로 붙여넣을 수 있습니다.</p>
-      <p class="tool-hint">Tip: <strong class="mono">캠</strong> 도구는 원형(편심)·달팽이형(등속)·하트형(왕복)·배형(볼록) 중 모양을 고른 뒤 중심에서 바깥으로 드래그하면 그려집니다. 선택 도구로 클릭하면 캠 모양을 다른 종류로 바꾸거나 크기를 조절할 수 있습니다.</p>
-      <p class="tool-hint">Tip: 시간이 부족하면 아래 <strong class="mono">작업 저장</strong> 버튼으로 파일을 내려받아 두었다가, 다음 시간에 <strong class="mono">불러오기</strong>로 이어서 그릴 수 있습니다.</p>
       <div class="canvas-wrap">
         <canvas id="board" role="img" aria-label="부품도를 그리는 캔버스"></canvas>
       </div>
@@ -272,7 +272,7 @@
   // 비워두면(기본값) "선생님께 제출하기" 버튼이 화면에 나타나지 않습니다.
   // 예: var SUBMIT_URL = 'https://script.google.com/macros/s/AKfycb.../exec';
   // ============================================================
-  var SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbyUxPnHuymQuuLY9S3DztR4s2uGc0uP9SfPY7iY_okkLBsyOyrUNkPDkpQP51A1fTJE/exec';
+  var SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbwODn5FbB4OH7XQ5nD31kC1sipXuA3zn5UTxI1RRC8VUQFlA88LJc2W82LnUVTmC5wN/exec';
 
   var canvas = document.getElementById('board');
   var ctx = canvas.getContext('2d');
@@ -340,6 +340,15 @@
     var f = CAM_PROFILES.filter(function(p){ return p.value === v; })[0];
     return f ? f.label : v;
   }
+  var gearType = 'toothed';
+  var GEAR_TYPES = [
+    { value: 'toothed', label: '톱니바퀴(기본)' },
+    { value: 'pegwheel', label: '막대꽂이(핀휠)' }
+  ];
+  function gearTypeLabel(v){
+    var f = GEAR_TYPES.filter(function(p){ return p.value === v; })[0];
+    return f ? f.label : v;
+  }
 
   window.addEventListener('keydown', function(e){ if (e.key === 'Shift') shiftPressed = true; });
   window.addEventListener('keyup', function(e){ if (e.key === 'Shift') shiftPressed = false; });
@@ -355,7 +364,7 @@
 
   function constrainEnd(toolName, start, raw){
     if (!shiftPressed) return raw;
-    if (toolName === 'line' || toolName === 'dim') {
+    if (toolName === 'line' || toolName === 'dim' || toolName === 'shaft' || toolName === 'pin' || toolName === 'crank') {
       var dx = raw.x - start.x, dy = raw.y - start.y;
       var dist = Math.hypot(dx, dy);
       if (dist < 0.001) return raw;
@@ -387,6 +396,16 @@
       var pad = 16;
       return { minX: Math.min(el.x1, el.x2) - pad, minY: Math.min(el.y1, el.y2) - pad, maxX: Math.max(el.x1, el.x2) + pad, maxY: Math.max(el.y1, el.y2) + pad };
     }
+    if (el.type === 'shaft' || el.type === 'pin') {
+      var half2 = (el.thick != null ? el.thick : 16) / 2;
+      return { minX: Math.min(el.x1, el.x2) - half2, minY: Math.min(el.y1, el.y2) - half2, maxX: Math.max(el.x1, el.x2) + half2, maxY: Math.max(el.y1, el.y2) + half2 };
+    }
+    if (el.type === 'crank') {
+      var cp = crankPoints(el);
+      var chalf = (el.thick != null ? el.thick : 14) / 2;
+      var cxs = cp.map(function(p){ return p.x; }), cys = cp.map(function(p){ return p.y; });
+      return { minX: Math.min.apply(null, cxs) - chalf, minY: Math.min.apply(null, cys) - chalf, maxX: Math.max.apply(null, cxs) + chalf, maxY: Math.max.apply(null, cys) + chalf };
+    }
     return { minX: Math.min(el.x1, el.x2), minY: Math.min(el.y1, el.y2), maxX: Math.max(el.x1, el.x2), maxY: Math.max(el.y1, el.y2) };
   }
 
@@ -417,7 +436,7 @@
       var r = Math.hypot(el.x2 - el.x1, el.y2 - el.y1);
       return [{ id: 'r', x: el.x1 + r, y: el.y1 }];
     }
-    if (el.type === 'line' || el.type === 'dim') {
+    if (el.type === 'line' || el.type === 'dim' || el.type === 'shaft' || el.type === 'pin' || el.type === 'crank') {
       return [{ id: 'p1', x: el.x1, y: el.y1 }, { id: 'p2', x: el.x2, y: el.y2 }];
     }
     return [];
@@ -473,7 +492,7 @@
       var r = Math.max(0.5, Math.hypot(p.x - orig.x1, p.y - orig.y1));
       return Object.assign({}, orig, { x2: orig.x1 + r, y2: orig.y1 });
     }
-    if (orig.type === 'line' || orig.type === 'dim') {
+    if (orig.type === 'line' || orig.type === 'dim' || orig.type === 'shaft' || orig.type === 'pin' || orig.type === 'crank') {
       var fixed = handleId === 'p1' ? { x: orig.x2, y: orig.y2 } : { x: orig.x1, y: orig.y1 };
       var moved = constrainEnd(orig.type, fixed, p);
       var updated = Object.assign({}, orig);
@@ -508,7 +527,7 @@
   }
 
   function typeLabel(t){
-    return { freehand: '자유곡선', line: '직선', dim: '치수선', rect: '사각형', circle: '원', gear: '기어', cam: '캠', eraser: '지우개 자국' }[t] || t;
+    return { freehand: '자유곡선', line: '직선', dim: '치수선', rect: '사각형', circle: '원', gear: '기어', cam: '캠', shaft: '축', pin: '핀', crank: '크랭크축', eraser: '지우개 자국' }[t] || t;
   }
 
   function elementMetrics(el){
@@ -529,10 +548,25 @@
       return { x: Math.round(el.x1), y: Math.round(el.y1), r: Math.round(Math.hypot(el.x2 - el.x1, el.y2 - el.y1)) };
     }
     if (el.type === 'gear') {
-      return { x: Math.round(el.x1), y: Math.round(el.y1), r: Math.round(Math.hypot(el.x2 - el.x1, el.y2 - el.y1)), teeth: el.teeth || 12 };
+      var gm = { x: Math.round(el.x1), y: Math.round(el.y1), r: Math.round(Math.hypot(el.x2 - el.x1, el.y2 - el.y1)), gearType: el.gearType || 'toothed' };
+      if ((el.gearType || 'toothed') === 'pegwheel') gm.pegCount = el.pegCount || 8;
+      else gm.teeth = el.teeth || 12;
+      return gm;
     }
     if (el.type === 'cam') {
       return { x: Math.round(el.x1), y: Math.round(el.y1), r: Math.round(Math.hypot(el.x2 - el.x1, el.y2 - el.y1)), profile: el.profile || 'eccentric' };
+    }
+    if (el.type === 'shaft' || el.type === 'pin') {
+      var slen = Math.hypot(el.x2 - el.x1, el.y2 - el.y1);
+      var sang = Math.atan2(el.y2 - el.y1, el.x2 - el.x1) * 180 / Math.PI;
+      if (sang < 0) sang += 360;
+      return { x: Math.round(el.x1), y: Math.round(el.y1), len: Math.round(slen), angle: Math.round(sang), thick: el.thick != null ? el.thick : (el.type === 'shaft' ? 16 : 8) };
+    }
+    if (el.type === 'crank') {
+      var klen = Math.hypot(el.x2 - el.x1, el.y2 - el.y1);
+      var kang = Math.atan2(el.y2 - el.y1, el.x2 - el.x1) * 180 / Math.PI;
+      if (kang < 0) kang += 360;
+      return { x: Math.round(el.x1), y: Math.round(el.y1), len: Math.round(klen), angle: Math.round(kang), offset: el.offset != null ? el.offset : 18, thick: el.thick != null ? el.thick : 14 };
     }
     return { x: 0, y: 0 };
   }
@@ -570,15 +604,20 @@
       return;
     }
     var el = elements[selectedIndices[0]];
-    selTypeLabel.textContent = el.type === 'cam' ? ('선택됨 · 캠(' + camProfileLabel(el.profile) + ')') : ('선택됨 · ' + typeLabel(el.type));
+    selTypeLabel.textContent = el.type === 'cam' ? ('선택됨 · 캠(' + camProfileLabel(el.profile) + ')') : (el.type === 'gear' ? ('선택됨 · 기어(' + gearTypeLabel(el.gearType || 'toothed') + ')') : ('선택됨 · ' + typeLabel(el.type)));
     var m = elementMetrics(el);
     var html = fieldHtml('selX', 'X(mm)', m.x) + fieldHtml('selY', 'Y(mm)', m.y);
     if (el.type === 'dim') html += fieldHtml('selLen', '길이(mm)', m.len) + fieldHtml('selAngle', '각도(°)', m.angle) + fieldHtmlText('selLabel', '치수 표시', el.label != null ? el.label : m.len);
     else if (el.type === 'line') html += fieldHtml('selLen', '길이(mm)', m.len) + fieldHtml('selAngle', '각도(°)', m.angle);
     else if (el.type === 'rect') html += fieldHtml('selW', '가로(mm)', m.w) + fieldHtml('selH', '세로(mm)', m.h);
     else if (el.type === 'circle') html += fieldHtml('selR', '반지름(mm)', m.r);
-    else if (el.type === 'gear') html += fieldHtml('selR', '반지름(mm)', m.r) + fieldHtml('selTeeth', '이 개수', m.teeth);
+    else if (el.type === 'gear') {
+      html += fieldHtml('selR', '반지름(mm)', m.r) + fieldHtmlSelect('selGearType', '기어 종류', GEAR_TYPES, el.gearType || 'toothed');
+      html += (m.gearType === 'pegwheel') ? fieldHtml('selPegCount', '막대 개수', m.pegCount) : fieldHtml('selTeeth', '이 개수', m.teeth);
+    }
     else if (el.type === 'cam') html += fieldHtml('selR', '반지름(mm)', m.r) + fieldHtmlSelect('selProfile', '캠 모양', CAM_PROFILES, el.profile || 'eccentric');
+    else if (el.type === 'shaft' || el.type === 'pin') html += fieldHtml('selLen', '길이(mm)', m.len) + fieldHtml('selAngle', '각도(°)', m.angle) + fieldHtml('selThick', '굵기(mm)', m.thick);
+    else if (el.type === 'crank') html += fieldHtml('selLen', '전체 길이(mm)', m.len) + fieldHtml('selAngle', '각도(°)', m.angle) + fieldHtml('selOffset', '꺾임 폭(mm)', m.offset) + fieldHtml('selThick', '굵기(mm)', m.thick);
     selFields.innerHTML = html;
     Array.prototype.forEach.call(selFields.querySelectorAll('input, select'), function(inp){
       inp.addEventListener('change', onFieldCommit);
@@ -607,6 +646,9 @@
     if ('h' in m) setFieldVal('selH', m.h);
     if ('r' in m) setFieldVal('selR', m.r);
     if ('teeth' in m) setFieldVal('selTeeth', m.teeth);
+    if ('pegCount' in m) setFieldVal('selPegCount', m.pegCount);
+    if ('thick' in m) setFieldVal('selThick', m.thick);
+    if ('offset' in m) setFieldVal('selOffset', m.offset);
   }
 
   function onFieldCommit(){
@@ -650,22 +692,46 @@
       updated = Object.assign({}, el, { x1: x, y1: y, x2: x + r, y2: y });
     } else if (el.type === 'gear') {
       var gr = Math.max(4, parseFloat(document.getElementById('selR').value) || m.r);
-      var teethInput = document.getElementById('selTeeth');
-      var teeth = Math.round(parseFloat(teethInput.value));
-      if (isNaN(teeth)) teeth = m.teeth;
-      teeth = Math.max(6, Math.min(60, teeth));
-      updated = Object.assign({}, el, { x1: x, y1: y, x2: x + gr, y2: y, teeth: teeth });
+      var gearTypeSel = document.getElementById('selGearType');
+      var newGearType = gearTypeSel ? gearTypeSel.value : (el.gearType || 'toothed');
+      updated = Object.assign({}, el, { x1: x, y1: y, x2: x + gr, y2: y, gearType: newGearType });
+      if (newGearType === 'pegwheel') {
+        var pegInput = document.getElementById('selPegCount');
+        var pegCount = pegInput ? Math.round(parseFloat(pegInput.value)) : NaN;
+        if (isNaN(pegCount)) pegCount = m.pegCount || 8;
+        pegCount = Math.max(3, Math.min(48, pegCount));
+        updated.pegCount = pegCount;
+      } else {
+        var teethInput = document.getElementById('selTeeth');
+        var teeth = teethInput ? Math.round(parseFloat(teethInput.value)) : NaN;
+        if (isNaN(teeth)) teeth = m.teeth || 12;
+        teeth = Math.max(6, Math.min(60, teeth));
+        updated.teeth = teeth;
+      }
     } else if (el.type === 'cam') {
       var camR = Math.max(0.5, parseFloat(document.getElementById('selR').value) || m.r);
       var profileSel = document.getElementById('selProfile');
       var profile = profileSel ? profileSel.value : (el.profile || 'eccentric');
       updated = Object.assign({}, el, { x1: x, y1: y, x2: x + camR, y2: y, profile: profile });
+    } else if (el.type === 'shaft' || el.type === 'pin') {
+      var slen2 = Math.max(1, parseFloat(document.getElementById('selLen').value) || m.len);
+      var sang2 = parseFloat(document.getElementById('selAngle').value); if (isNaN(sang2)) sang2 = m.angle;
+      var srad2 = sang2 * Math.PI / 180;
+      var sthick = Math.max(2, parseFloat(document.getElementById('selThick').value) || m.thick);
+      updated = Object.assign({}, el, { x1: x, y1: y, x2: x + Math.cos(srad2) * slen2, y2: y + Math.sin(srad2) * slen2, thick: sthick });
+    } else if (el.type === 'crank') {
+      var klen2 = Math.max(1, parseFloat(document.getElementById('selLen').value) || m.len);
+      var kang2 = parseFloat(document.getElementById('selAngle').value); if (isNaN(kang2)) kang2 = m.angle;
+      var krad2 = kang2 * Math.PI / 180;
+      var koff = Math.max(2, parseFloat(document.getElementById('selOffset').value) || m.offset);
+      var kthick = Math.max(2, parseFloat(document.getElementById('selThick').value) || m.thick);
+      updated = Object.assign({}, el, { x1: x, y1: y, x2: x + Math.cos(krad2) * klen2, y2: y + Math.sin(krad2) * klen2, offset: koff, thick: kthick });
     } else {
       updated = el;
     }
     elements[selectedIndex] = updated;
     redraw();
-    if (el.type === 'cam') buildSelectionPanel(); else updateSelectionValues();
+    if (el.type === 'cam' || el.type === 'gear') buildSelectionPanel(); else updateSelectionValues();
   }
 
   function clearSelection(){
@@ -837,36 +903,56 @@
 
   function drawGear(c, el, dashed){
     var outerR = Math.hypot(el.x2 - el.x1, el.y2 - el.y1) || 1;
-    var innerR = outerR * 0.72;
-    var teeth = Math.max(6, el.teeth || 12);
-    var angleStep = (Math.PI * 2) / teeth;
+    var gtype = el.gearType || 'toothed';
     c.save();
     c.strokeStyle = el.color;
     c.fillStyle = el.color;
     c.lineWidth = el.width;
     c.lineJoin = 'round';
     c.setLineDash(dashed ? [7, 5] : []);
-    c.beginPath();
-    for (var i = 0; i < teeth; i++) {
-      var a0 = i * angleStep;
-      var pA = a0;
-      var pB = a0 + angleStep * 0.15;
-      var pC = a0 + angleStep * 0.35;
-      var pD = a0 + angleStep * 0.5;
-      var pts = [
-        { a: pA, r: innerR },
-        { a: pB, r: outerR },
-        { a: pC, r: outerR },
-        { a: pD, r: innerR }
-      ];
-      pts.forEach(function(pt){
-        var px = el.x1 + Math.cos(pt.a) * pt.r;
-        var py = el.y1 + Math.sin(pt.a) * pt.r;
-        if (i === 0 && pt === pts[0]) c.moveTo(px, py); else c.lineTo(px, py);
-      });
+
+    if (gtype === 'pegwheel') {
+      // plain circular plate with evenly spaced pegs near the rim
+      c.beginPath();
+      c.arc(el.x1, el.y1, outerR, 0, Math.PI * 2);
+      c.stroke();
+      var pegCount = Math.max(2, el.pegCount || 8);
+      var pegR = Math.max(2.2, outerR * 0.09);
+      var pegOrbit = outerR * 0.78;
+      for (var p = 0; p < pegCount; p++) {
+        var pang = (Math.PI * 2 / pegCount) * p - Math.PI / 2;
+        var px2 = el.x1 + Math.cos(pang) * pegOrbit;
+        var py2 = el.y1 + Math.sin(pang) * pegOrbit;
+        c.beginPath();
+        c.arc(px2, py2, pegR, 0, Math.PI * 2);
+        c.stroke();
+      }
+    } else {
+      var innerR = outerR * 0.72;
+      var teeth = Math.max(6, el.teeth || 12);
+      var angleStep = (Math.PI * 2) / teeth;
+      c.beginPath();
+      for (var i = 0; i < teeth; i++) {
+        var a0 = i * angleStep;
+        var pA = a0;
+        var pB = a0 + angleStep * 0.15;
+        var pC = a0 + angleStep * 0.35;
+        var pD = a0 + angleStep * 0.5;
+        var pts = [
+          { a: pA, r: innerR },
+          { a: pB, r: outerR },
+          { a: pC, r: outerR },
+          { a: pD, r: innerR }
+        ];
+        pts.forEach(function(pt){
+          var px = el.x1 + Math.cos(pt.a) * pt.r;
+          var py = el.y1 + Math.sin(pt.a) * pt.r;
+          if (i === 0 && pt === pts[0]) c.moveTo(px, py); else c.lineTo(px, py);
+        });
+      }
+      c.closePath();
+      c.stroke();
     }
-    c.closePath();
-    c.stroke();
 
     // center bore hole
     var boreR = Math.max(4, outerR * 0.16);
@@ -942,6 +1028,109 @@
     c.restore();
   }
 
+  // 두 점 (x1,y1)-(x2,y2)을 잇는 캡슐(알약) 몸통의 윤곽선만 그린다 (선 색/굵기/
+  // 점선 여부는 호출하는 쪽에서 이미 설정해 둔 상태를 그대로 사용). cornerRadius를
+  // 굵기의 절반만큼 크게 주면 완전히 둥근 모양이 되고, 작은 고정값을 주면 모서리만
+  // 살짝 둥근 모양이 된다. 축/핀뿐 아니라 크랭크축의 각 구간에도 재사용한다.
+  function strokeCapsuleBody(c, x1, y1, x2, y2, thick, cornerRadius){
+    var dx = x2 - x1, dy = y2 - y1;
+    var L = Math.hypot(dx, dy) || 1;
+    var angle = Math.atan2(dy, dx);
+    var half = thick / 2;
+    var r = Math.max(0.5, Math.min(cornerRadius, half, L / 2));
+    c.save();
+    c.translate(x1, y1);
+    c.rotate(angle);
+    c.beginPath();
+    c.moveTo(r, -half);
+    c.lineTo(L - r, -half);
+    c.arc(L - r, -half + r, r, -Math.PI / 2, 0);
+    c.lineTo(L, half - r);
+    c.arc(L - r, half - r, r, 0, Math.PI / 2);
+    c.lineTo(r, half);
+    c.arc(r, half - r, r, Math.PI / 2, Math.PI);
+    c.lineTo(0, -half + r);
+    c.arc(r, -half + r, r, Math.PI, Math.PI * 1.5);
+    c.closePath();
+    c.stroke();
+    c.restore();
+  }
+
+  // 두 점을 잇는 캡슐 몸통 + 가운데를 지나는 파선-점 중심선 (축/핀용).
+  function drawCapsule(c, el, dashed, cornerRadius){
+    var thick = el.thick != null ? el.thick : 16;
+    var half = thick / 2;
+    var dx = el.x2 - el.x1, dy = el.y2 - el.y1;
+    var L = Math.hypot(dx, dy) || 1;
+    var angle = Math.atan2(dy, dx);
+    c.save();
+    c.strokeStyle = el.color;
+    c.lineWidth = el.width;
+    c.lineJoin = 'round';
+    c.setLineDash(dashed ? [7, 5] : []);
+    strokeCapsuleBody(c, el.x1, el.y1, el.x2, el.y2, thick, cornerRadius);
+    // centerline (dash-dot), matching gear/cam's centerline convention
+    c.translate(el.x1, el.y1);
+    c.rotate(angle);
+    c.setLineDash([10, 3, 2, 3]);
+    c.lineWidth = Math.max(1, el.width * 0.6);
+    var ext = half * 1.2;
+    c.beginPath();
+    c.moveTo(-ext, 0);
+    c.lineTo(L + ext, 0);
+    c.stroke();
+    c.restore();
+  }
+
+  function drawShaft(c, el, dashed){
+    drawCapsule(c, el, dashed, 9999); // clamps to half-thickness => full round ends
+  }
+
+  function drawPin(c, el, dashed){
+    drawCapsule(c, el, dashed, 3); // small fixed corner radius => barely-rounded ends
+  }
+
+  // 크랭크축(F안): 축 → 직각으로 옆으로(오프셋) → 짧게 같은 방향으로(크랭크 핀
+  // 구간) → 다시 직각으로 반대쪽 옆으로 → 처음과 같은 축 선상으로 복귀.
+  // x1,y1→x2,y2 로 전체 길이·방향을 잡고, offset으로 꺾이는 폭을 조절한다.
+  function crankPoints(el){
+    var dx = el.x2 - el.x1, dy = el.y2 - el.y1;
+    var L = Math.hypot(dx, dy) || 1;
+    var ux = dx / L, uy = dy / L;
+    var px = -uy, py = ux;
+    var off = el.offset != null ? el.offset : 18;
+    var seg1 = L * 0.38, pin = L * 0.24, seg3 = L - seg1 - pin;
+    var p0 = { x: el.x1, y: el.y1 };
+    var p1 = { x: p0.x + ux * seg1, y: p0.y + uy * seg1 };
+    var p2 = { x: p1.x + px * off, y: p1.y + py * off };
+    var p3 = { x: p2.x + ux * pin, y: p2.y + uy * pin };
+    var p4 = { x: p3.x - px * off, y: p3.y - py * off };
+    var p5 = { x: p4.x + ux * seg3, y: p4.y + uy * seg3 };
+    return [p0, p1, p2, p3, p4, p5];
+  }
+
+  // 크랭크축도 축/핀처럼 "속이 있는 둥근 막대"로 보이도록, 꺾인 구간마다 캡슐
+  // 몸통을 이어 그리고 그 위에 전체를 관통하는 중심선 하나를 얹는다 — 얇은 선
+  // 하나로만 그리면 납작해 보인다는 피드백을 반영해 입체감을 맞췄다.
+  function drawCrank(c, el, dashed){
+    var pts = crankPoints(el);
+    var thick = el.thick != null ? el.thick : 14;
+    c.save();
+    c.strokeStyle = el.color;
+    c.lineWidth = el.width;
+    c.lineJoin = 'round';
+    c.setLineDash(dashed ? [7, 5] : []);
+    for (var i = 0; i < pts.length - 1; i++) {
+      strokeCapsuleBody(c, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, thick, 9999);
+    }
+    c.setLineDash([10, 3, 2, 3]);
+    c.lineWidth = Math.max(1, el.width * 0.6);
+    c.beginPath();
+    pts.forEach(function(p, i){ i === 0 ? c.moveTo(p.x, p.y) : c.lineTo(p.x, p.y); });
+    c.stroke();
+    c.restore();
+  }
+
   function strokeElement(c, el, dashed){
     if (el.type === 'eraser') {
       // Punch a true transparent hole in the ink layer only — never touches
@@ -984,6 +1173,12 @@
       drawGear(c, el, dashed);
     } else if (el.type === 'cam') {
       drawCam(c, el, dashed);
+    } else if (el.type === 'shaft') {
+      drawShaft(c, el, dashed);
+    } else if (el.type === 'pin') {
+      drawPin(c, el, dashed);
+    } else if (el.type === 'crank') {
+      drawCrank(c, el, dashed);
     }
     c.setLineDash([]);
   }
@@ -1115,7 +1310,11 @@
       var end = constrainEnd(tool, startPt, p);
       var previewEl = { type: tool, x1: startPt.x, y1: startPt.y, x2: end.x, y2: end.y, color: color, width: strokeWidth };
       if (tool === 'dim') previewEl.label = String(Math.round(Math.hypot(end.x - startPt.x, end.y - startPt.y)));
+      if (tool === 'gear') { previewEl.gearType = gearType; if (gearType === 'pegwheel') previewEl.pegCount = 8; else previewEl.teeth = 12; }
       if (tool === 'cam') previewEl.profile = camProfile;
+      if (tool === 'shaft') previewEl.thick = 16;
+      if (tool === 'pin') previewEl.thick = 8;
+      if (tool === 'crank') { previewEl.offset = 18; previewEl.thick = 14; }
       redraw(previewEl, true);
     }
   });
@@ -1160,8 +1359,11 @@
       if (dist >= 1) {
         var newEl = { type: tool, x1: startPt.x, y1: startPt.y, x2: end.x, y2: end.y, color: color, width: strokeWidth };
         if (tool === 'dim') newEl.label = String(Math.round(dist));
-        if (tool === 'gear') newEl.teeth = 12;
+        if (tool === 'gear') { newEl.gearType = gearType; if (gearType === 'pegwheel') newEl.pegCount = 8; else newEl.teeth = 12; }
         if (tool === 'cam') newEl.profile = camProfile;
+        if (tool === 'shaft') newEl.thick = 16;
+        if (tool === 'pin') newEl.thick = 8;
+        if (tool === 'crank') { newEl.offset = 18; newEl.thick = 14; }
         elements.push(newEl);
       }
     }
@@ -1182,6 +1384,7 @@
       tool = 'select';
       canvas.style.cursor = 'pointer';
       camProfileRow.hidden = true;
+      gearTypeRow.hidden = true;
     }
     selectedIndices = [idx];
     dragMode = null;
@@ -1193,6 +1396,7 @@
   });
 
   var camProfileRow = document.getElementById('camProfileRow');
+  var gearTypeRow = document.getElementById('gearTypeRow');
   document.querySelectorAll('.tool-btn[data-tool]').forEach(function(btn){
     btn.addEventListener('click', function(){
       document.querySelectorAll('.tool-btn[data-tool]').forEach(function(b){ b.classList.remove('active'); });
@@ -1201,6 +1405,7 @@
       if (tool !== 'select') { clearSelection(); redraw(); }
       canvas.style.cursor = tool === 'select' ? 'pointer' : (tool === 'eraser' ? 'cell' : 'crosshair');
       camProfileRow.hidden = (tool !== 'cam');
+      gearTypeRow.hidden = (tool !== 'gear');
     });
   });
   document.querySelectorAll('.cam-profile-btn').forEach(function(btn){
@@ -1208,6 +1413,13 @@
       document.querySelectorAll('.cam-profile-btn').forEach(function(b){ b.classList.remove('active'); });
       btn.classList.add('active');
       camProfile = btn.dataset.profile;
+    });
+  });
+  document.querySelectorAll('.gear-type-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.gear-type-btn').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      gearType = btn.dataset.geartype;
     });
   });
   document.querySelectorAll('.swatch').forEach(function(btn){
