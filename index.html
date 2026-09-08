@@ -1,1736 +1,1985 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>오토마타 부품도 그리기</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<title>카페 울공 키오스크</title>
 <style>
-  :root{
-    --paper:#faf9f3;
-    --surface:#f1efe3;
-    --ink:#20242b;
-    --ink-soft:#5b6472;
-    --ink-faint:#8a8f79;
-    --line:#20242b;
-    --accent:#b8412c;
-    --accent-2:#2c5f8a;
-    --grid-line:rgba(32,36,43,0.09);
-    --border:rgba(32,36,43,0.22);
-    --border-soft:rgba(32,36,43,0.14);
-    --ok:#2f7a4d;
+  /* This page renders a single, fixed device screen — like a real kiosk,
+     it does not follow the viewer's OS light/dark setting. Colors are
+     declared once and used everywhere via tokens. */
+
+  @import url('https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Gowun+Dodum&display=swap');
+
+  :root {
+    --ink: #2b2420;
+    --ink-soft: #6e645b;
+    --ink-faint: #a89e93;
+    --paper: #ffffff;
+    --paper-tint: #f7f3ec;
+    --stage: #ece6dc;
+    --line: #e6ded2;
+    --gold: #c8912e;
+    --gold-soft: #f1e2c4;
+    --sage: #4f8272;
+    --plum: #82628a;
+    --toast: #9c6f45;
+    --cta: #2f6b54;
+    --cta-hover: #24543f;
+    --danger: #b23b3b;
+    --shadow: rgba(43, 36, 32, 0.16);
+    --radius-lg: 28px;
+    --radius-md: 16px;
+    --radius-sm: 10px;
+    font-size: 16px;
   }
-  @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){
-      --paper:#0d2b4e; --surface:#123a63; --ink:#eaf2fb; --ink-soft:#a9c8e6; --ink-faint:#7fa2c4;
-      --line:#eaf2fb; --accent:#ffb454; --accent-2:#8fd0ff;
-      --grid-line:rgba(234,242,251,0.14); --border:rgba(234,242,251,0.35); --border-soft:rgba(234,242,251,0.18);
-      --ok:#7fd9a4;
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background: var(--stage);
+    color: var(--ink);
+    font-family: 'Gowun Dodum', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .display {
+    font-family: 'Do Hyeon', 'Malgun Gothic', sans-serif;
+    font-weight: 400;
+  }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  button:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 3px solid var(--gold);
+    outline-offset: 2px;
+  }
+
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- stage ---------- */
+
+  #kiosk-root, #phone-root {
+    display: none;
+  }
+
+  .stage {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: clamp(14px, 3vw, 40px);
+  }
+
+  .kiosk {
+    position: relative;
+    width: 100%;
+    max-width: 1180px;
+    background: var(--paper);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 30px 60px var(--shadow), 0 2px 0 rgba(255,255,255,0.4) inset;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: min(800px, calc(100vh - 40px));
+  }
+
+  /* ---------- header ---------- */
+
+  .kiosk__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 28px;
+    background: var(--ink);
+    color: var(--paper);
+    flex-wrap: wrap;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .brand__mark {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--gold);
+    display: grid;
+    place-items: center;
+    color: var(--ink);
+    flex-shrink: 0;
+  }
+
+  .brand__mark svg { width: 26px; height: 26px; }
+
+  .brand__text .display {
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+
+  .brand__text p {
+    margin: 4px 0 0;
+    font-size: 0.82rem;
+    color: rgba(255,255,255,0.65);
+  }
+
+  .order-type {
+    display: flex;
+    gap: 6px;
+    background: rgba(255,255,255,0.1);
+    padding: 5px;
+    border-radius: 999px;
+  }
+
+  .order-type button {
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,0.7);
+    padding: 9px 18px;
+    border-radius: 999px;
+    font-size: 0.92rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .order-type button svg { width: 16px; height: 16px; }
+
+  .order-type button.is-active {
+    background: var(--gold);
+    color: var(--ink);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .help-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.85);
+    padding: 9px 14px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .help-btn:hover { background: rgba(255,255,255,0.2); color: var(--paper); }
+  .help-btn svg { width: 16px; height: 16px; }
+
+  .help-toast {
+    position: absolute;
+    left: 50%;
+    bottom: 80px;
+    transform: translateX(-50%) translateY(16px);
+    background: var(--ink);
+    color: var(--paper);
+    padding: 12px 20px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    box-shadow: 0 14px 30px var(--shadow);
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    z-index: 35;
+    white-space: nowrap;
+  }
+
+  .help-toast svg { width: 16px; height: 16px; color: var(--gold); flex-shrink: 0; }
+
+  .help-toast.is-visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ---------- body layout ---------- */
+
+  .kiosk__body {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 168px 1fr 336px;
+    grid-template-rows: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  /* ---------- category rail ---------- */
+
+  .categories {
+    background: var(--paper-tint);
+    border-right: 1px solid var(--line);
+    padding: 18px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  .cat-btn {
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 12px;
+    border-radius: var(--radius-sm);
+    text-align: left;
+    font-size: 0.95rem;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .cat-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+  .cat-btn:hover { background: var(--stage); }
+
+  .cat-btn.is-active {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  /* ---------- menu grid ---------- */
+
+  .menu {
+    padding: 22px 24px 32px;
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  .menu__heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .menu__heading h2 {
+    margin: 0;
+    font-size: 1.3rem;
+  }
+
+  .menu__heading span {
+    color: var(--ink-faint);
+    font-size: 0.85rem;
+  }
+
+  .menu__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(208px, 1fr));
+    gap: 16px;
+  }
+
+  .card {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--paper);
+    transition: box-shadow 0.15s, transform 0.15s;
+  }
+
+  .card:hover {
+    box-shadow: 0 8px 20px var(--shadow);
+    transform: translateY(-2px);
+  }
+
+  .card__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .card__icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+
+  .card__icon svg { width: 26px; height: 26px; }
+
+  .temp-tag {
+    font-size: 0.72rem;
+    padding: 4px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+
+  .temp-toggle {
+    display: flex;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .temp-toggle button {
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    font-size: 0.72rem;
+    padding: 5px 10px;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .temp-toggle button.is-active {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .card__name {
+    font-size: 1.08rem;
+    line-height: 1.3;
+  }
+
+  .card__price {
+    font-weight: 400;
+    font-size: 1.02rem;
+  }
+
+  .options-toggle {
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    font-size: 0.78rem;
+    text-align: left;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-color: var(--line);
+  }
+
+  .options-toggle:hover { color: var(--ink); }
+
+  .options-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+    background: var(--paper-tint);
+    border-radius: var(--radius-sm);
+  }
+
+  .option-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .option-row__label {
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    flex-shrink: 0;
+  }
+
+  .option-row .temp-toggle button { white-space: nowrap; }
+
+  .decaf-chip {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.85rem;
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  .decaf-chip input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--ink);
+  }
+
+  .card__bottom {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .stepper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .stepper button {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--paper-tint);
+    color: var(--ink);
+    font-size: 1rem;
+    line-height: 1;
+    display: grid;
+    place-items: center;
+  }
+
+  .stepper button:hover { background: var(--stage); }
+
+  .stepper__count {
+    min-width: 18px;
+    text-align: center;
+    font-size: 0.95rem;
+  }
+
+  .add-btn {
+    border: none;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 9px 16px;
+    border-radius: 999px;
+    font-size: 0.88rem;
+    white-space: nowrap;
+    transition: background 0.15s, transform 0.1s;
+  }
+
+  .add-btn:hover { background: #47392f; }
+
+  .add-btn.is-added {
+    background: var(--cta);
+  }
+
+  /* ---------- cart panel ---------- */
+
+  .cart {
+    background: var(--paper-tint);
+    border-left: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .cart__summary-bar {
+    display: none;
+  }
+
+  .cart__head {
+    padding: 18px 20px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .cart__head h2 {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+
+  .cart__head span {
+    font-size: 0.8rem;
+    color: var(--ink-faint);
+  }
+
+  .cart__list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .cart__empty {
+    margin: auto;
+    text-align: center;
+    color: var(--ink-faint);
+    font-size: 0.92rem;
+    padding: 20px;
+  }
+
+  .cart__empty svg {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 8px;
+    color: var(--ink-faint);
+  }
+
+  .line {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .line__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .line__name {
+    font-size: 0.95rem;
+    line-height: 1.25;
+  }
+
+  .line__meta {
+    font-size: 0.76rem;
+    color: var(--ink-faint);
+  }
+
+  .line__remove {
+    border: none;
+    background: transparent;
+    color: var(--ink-faint);
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 2px 4px;
+  }
+
+  .line__remove:hover { color: var(--danger); }
+
+  .line__bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .line .stepper button { width: 26px; height: 26px; }
+
+  .line__price {
+    font-size: 0.92rem;
+  }
+
+  .cart__foot {
+    padding: 16px 20px 20px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .cart__total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .cart__total-row span:first-child {
+    font-size: 0.95rem;
+    color: var(--ink-soft);
+  }
+
+  .cart__total-row span:last-child {
+    font-size: 1.5rem;
+  }
+
+  .cart__receipt-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+  }
+
+  .cart__receipt-row .temp-toggle button { padding: 5px 12px; }
+
+  .pay-btn {
+    border: none;
+    background: var(--cta);
+    color: var(--paper);
+    padding: 15px;
+    border-radius: var(--radius-sm);
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.15s;
+  }
+
+  .pay-btn:hover:not(:disabled) { background: var(--cta-hover); }
+
+  .pay-btn:disabled {
+    background: var(--ink-faint);
+    cursor: not-allowed;
+  }
+
+  .pay-btn svg { width: 20px; height: 20px; }
+
+  /* ---------- modal ---------- */
+
+  .modal-veil {
+    position: fixed;
+    inset: 0;
+    background: rgba(43,36,32,0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 40;
+  }
+
+  .modal-veil.is-open { display: flex; }
+
+  .modal {
+    background: var(--paper);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 400px;
+    padding: 32px 28px 28px;
+    text-align: center;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.35);
+  }
+
+  .modal--processing .spinner {
+    width: 48px;
+    height: 48px;
+    margin: 8px auto 20px;
+    border-radius: 50%;
+    border: 4px solid var(--line);
+    border-top-color: var(--cta);
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .check {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--cta);
+    color: var(--paper);
+    display: grid;
+    place-items: center;
+    margin: 0 auto 14px;
+  }
+
+  .check svg { width: 34px; height: 34px; }
+
+  .order-number {
+    font-size: 2.1rem;
+    color: var(--cta);
+    margin: 4px 0 2px;
+  }
+
+  .order-number-label {
+    font-size: 0.82rem;
+    color: var(--ink-faint);
+    margin-bottom: 14px;
+  }
+
+  .receipt {
+    text-align: left;
+    background: var(--paper-tint);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    margin: 14px 0 18px;
+  }
+
+  .receipt__row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.86rem;
+    padding: 4px 0;
+    color: var(--ink-soft);
+  }
+
+  .receipt__row.total {
+    color: var(--ink);
+    font-size: 0.98rem;
+    padding-top: 8px;
+    margin-top: 6px;
+    border-top: 1px dashed var(--ink-faint);
+  }
+
+  .modal .new-order-btn {
+    width: 100%;
+    border: none;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 14px;
+    border-radius: var(--radius-sm);
+    font-size: 1rem;
+  }
+
+  .modal .new-order-btn:hover { background: #47392f; }
+
+  .modal p.processing-label {
+    color: var(--ink-soft);
+    font-size: 0.98rem;
+  }
+
+  /* ---------- payment method step ---------- */
+
+  .modal-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: -6px -6px 6px;
+  }
+
+  .modal-icon-btn {
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+  }
+
+  .modal-icon-btn:hover { background: var(--paper-tint); color: var(--ink); }
+  .modal-icon-btn svg { width: 18px; height: 18px; }
+
+  .modal-title {
+    font-size: 1.15rem;
+    margin: 4px 0 2px;
+  }
+
+  .modal-total {
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+    margin-bottom: 18px;
+  }
+
+  .modal-total b { color: var(--ink); font-weight: 400; }
+
+  .pay-methods {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .pay-method-btn {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    text-align: left;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .pay-method-btn:hover {
+    border-color: var(--gold);
+    background: var(--gold-soft);
+  }
+
+  .pay-method-btn__icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: var(--paper-tint);
+    color: var(--ink);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+
+  .pay-method-btn__icon svg { width: 24px; height: 24px; }
+
+  .pay-method-btn__text .name { font-size: 1rem; }
+  .pay-method-btn__text .hint {
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+    margin-top: 2px;
+  }
+
+  /* ---------- cash step ---------- */
+
+  .cash-total {
+    background: var(--paper-tint);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    margin-bottom: 16px;
+  }
+
+  .cash-total-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+    padding: 3px 0;
+  }
+
+  .cash-total-row b {
+    color: var(--ink);
+    font-weight: 400;
+    font-size: 1.1rem;
+  }
+
+  .cash-total-row.remaining b { color: var(--danger); }
+  .cash-total-row.remaining.is-met b { color: var(--cta); }
+
+  .bill-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .bill-btn {
+    border: 1.5px dashed var(--line);
+    background: var(--paper);
+    border-radius: var(--radius-sm);
+    padding: 12px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--ink);
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .bill-btn:hover { border-color: var(--gold); background: var(--gold-soft); }
+  .bill-btn svg { width: 26px; height: 26px; color: var(--toast); }
+  .bill-btn span { font-size: 0.92rem; }
+  .bill-btn small { font-size: 0.7rem; color: var(--ink-faint); }
+
+  .cash-actions {
+    display: flex;
+    gap: 10px;
+  }
+
+  .cash-actions .ghost-btn {
+    flex: 1;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--ink-soft);
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.92rem;
+  }
+
+  .cash-actions .ghost-btn:hover { background: var(--paper-tint); }
+
+  /* ---------- qr step ---------- */
+
+  .qr-frame {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    display: inline-grid;
+    place-items: center;
+    margin: 4px auto 14px;
+  }
+
+  .qr-frame img, .qr-frame canvas { display: block; }
+
+  .qr-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+  }
+
+  .qr-status .dot-spin {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2.5px solid var(--line);
+    border-top-color: var(--gold);
+    animation: spin 0.8s linear infinite;
+  }
+
+  /* ---------- phone confirm view ---------- */
+
+  .phone-card__sub {
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+    margin: 2px 0 4px;
+  }
+
+  .phone-card__order-no {
+    color: var(--ink-faint);
+    font-size: 0.85rem;
+    margin-top: 14px;
+  }
+
+  /* ---------- responsive: bottom-sheet cart ---------- */
+
+  @media (max-width: 980px) {
+    .kiosk__body {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr;
     }
+
+    .categories {
+      flex-direction: row;
+      overflow-x: auto;
+      border-right: none;
+      border-bottom: 1px solid var(--line);
+      padding: 10px 12px;
+    }
+
+    .cat-btn { flex-shrink: 0; }
+    .cat-btn span.cat-label { display: inline; }
+
+    .menu { padding-bottom: 90px; }
+
+    .cart {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      max-width: 1180px;
+      margin: 0 auto;
+      border-left: none;
+      border-top: 1px solid var(--line);
+      border-radius: 20px 20px 0 0;
+      box-shadow: 0 -12px 30px var(--shadow);
+      max-height: 78vh;
+      transform: translateY(calc(100% - 62px));
+      transition: transform 0.25s ease;
+      z-index: 30;
+    }
+
+    .cart.is-open { transform: translateY(0); }
+
+    .cart__summary-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      height: 62px;
+      cursor: pointer;
+      border: none;
+      background: var(--ink);
+      color: var(--paper);
+      width: 100%;
+      border-radius: 20px 20px 0 0;
+    }
+
+    .cart__summary-bar .count-pill {
+      background: var(--gold);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 2px 9px;
+      font-size: 0.78rem;
+      margin-right: 8px;
+    }
+
+    .cart__summary-bar .chevron {
+      transition: transform 0.2s;
+    }
+
+    .cart.is-open .cart__summary-bar .chevron {
+      transform: rotate(180deg);
+    }
+
+    .cart__head { display: none; }
   }
-  :root[data-theme="dark"]{
-    --paper:#0d2b4e; --surface:#123a63; --ink:#eaf2fb; --ink-soft:#a9c8e6; --ink-faint:#7fa2c4;
-    --line:#eaf2fb; --accent:#ffb454; --accent-2:#8fd0ff;
-    --grid-line:rgba(234,242,251,0.14); --border:rgba(234,242,251,0.35); --border-soft:rgba(234,242,251,0.18);
-    --ok:#7fd9a4;
+
+  @media (max-width: 560px) {
+    .menu__grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+    .kiosk__header { padding: 16px 18px; }
+    .brand__text p { display: none; }
   }
-
-  *{ box-sizing:border-box; }
-  [hidden]{ display:none !important; }
-  body{
-    background:var(--paper); color:var(--ink); margin:0; padding:28px 14px 60px;
-    font-family:'IBM Plex Sans KR','Noto Sans KR',sans-serif; line-height:1.6;
-  }
-  .page{ max-width:1220px; margin:0 auto; }
-  .sheet{
-    border:2px solid var(--line);
-    background-image:linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-    background-size:22px 22px; padding:12px;
-  }
-  .sheet-inner{ border:1px solid var(--border-soft); padding:26px clamp(14px,4vw,40px) 32px; }
-
-  h1,h2{ margin:0; text-wrap:balance; }
-  p{ margin:0; }
-  .mono{ font-family:'IBM Plex Mono',monospace; }
-
-  .titlebar{ display:flex; flex-wrap:wrap; gap:18px 28px; justify-content:space-between; align-items:flex-end; padding-bottom:16px; border-bottom:2px solid var(--line); margin-bottom:24px; }
-  .doc-no{ font-family:'IBM Plex Mono',monospace; font-size:0.7rem; letter-spacing:0.12em; color:var(--accent-2); text-transform:uppercase; display:block; margin-bottom:8px; }
-  h1{ font-size:clamp(1.35rem,3vw,1.8rem); font-weight:700; letter-spacing:-0.01em; }
-  .subtitle{ color:var(--ink-soft); font-size:0.93rem; margin-top:8px; max-width:52ch; }
-  .meta-row{ display:flex; gap:10px; flex-wrap:wrap; }
-  .meta-chip{ border:1px solid var(--border); padding:6px 11px; display:flex; flex-direction:column; gap:2px; min-width:78px; }
-  .meta-chip span{ font-size:0.6rem; letter-spacing:0.07em; color:var(--ink-faint); text-transform:uppercase; }
-  .meta-chip strong{ font-family:'IBM Plex Mono',monospace; font-size:0.82rem; font-weight:600; }
-
-  .section-label{ font-family:'IBM Plex Mono',monospace; font-size:0.75rem; letter-spacing:0.06em; color:var(--accent-2); text-transform:uppercase; font-weight:600; border-bottom:1px solid var(--border); padding-bottom:7px; margin-bottom:16px; }
-  section{ margin-bottom:30px; }
-
-  /* student info */
-  .info-row{ display:flex; gap:14px; flex-wrap:wrap; }
-  .field{ display:flex; flex-direction:column; gap:6px; }
-  .field label{ font-size:0.78rem; color:var(--ink-soft); font-weight:500; }
-  .field input{
-    font-family:'IBM Plex Mono',monospace; font-size:0.95rem; padding:9px 11px; border:1.4px solid var(--border);
-    background:var(--surface); color:var(--ink); border-radius:0; min-width:0;
-  }
-  .field input:focus{ outline:2px solid var(--accent-2); outline-offset:1px; }
-  .field.num input{ width:90px; }
-  .field.name input{ width:160px; }
-  .field input.field-error{ border-color:var(--accent); }
-
-  /* toolbar */
-  .tool-panel{ border:1px solid var(--border-soft); background:var(--surface); padding:16px 16px 20px; }
-  .tool-row{ display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
-  .tool-row:last-of-type{ margin-bottom:0; }
-  .tool-group{ display:flex; gap:6px; align-items:center; }
-  .tool-group-label{ font-size:0.68rem; color:var(--ink-faint); letter-spacing:0.06em; text-transform:uppercase; margin-right:2px; font-family:'IBM Plex Mono',monospace; }
-  .tool-btn{
-    font-family:'IBM Plex Sans KR',sans-serif; font-size:0.76rem; padding:6px 10px; border:1.4px solid var(--border);
-    background:var(--paper); color:var(--ink); cursor:pointer; white-space:nowrap;
-  }
-  .tool-btn:hover{ border-color:var(--ink-soft); }
-  .tool-btn.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
-  .cam-profile-btn{ font-size:0.72rem; padding:6px 9px; }
-  .swatch{ width:28px; height:28px; border-radius:50%; border:2px solid transparent; cursor:pointer; padding:0; box-shadow:0 0 0 1px var(--border); flex:none; }
-  .swatch.active{ border-color:var(--accent-2); box-shadow:0 0 0 1px var(--accent-2); }
-  .thick-btn{ font-family:'IBM Plex Mono',monospace; font-size:0.76rem; padding:6px 11px; border:1.4px solid var(--border); background:var(--paper); color:var(--ink); cursor:pointer; white-space:nowrap; }
-  .thick-btn.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
-  .ghost-btn{ font-family:'IBM Plex Sans KR',sans-serif; font-size:0.8rem; padding:6px 12px; border:1.4px solid var(--border); background:transparent; color:var(--ink-soft); cursor:pointer; white-space:nowrap; }
-  .ghost-btn:hover:not(:disabled){ color:var(--ink); border-color:var(--ink-soft); }
-  .ghost-btn:disabled{ opacity:0.4; cursor:not-allowed; }
-  .ghost-btn.danger{ color:var(--accent); border-color:var(--accent); }
-
-  /* selection panel */
-  .selection-panel{ margin-top:14px; padding-top:14px; border-top:1px dashed var(--border); display:flex; flex-wrap:wrap; gap:12px 20px; align-items:flex-end; }
-  .sel-type-label{ font-family:'IBM Plex Mono',monospace; font-size:0.72rem; letter-spacing:0.06em; color:var(--accent-2); text-transform:uppercase; font-weight:600; align-self:center; }
-  .sel-fields{ display:flex; flex-wrap:wrap; gap:12px; }
-  .sel-field{ display:flex; flex-direction:column; gap:4px; }
-  .sel-field label{ font-size:0.68rem; color:var(--ink-faint); letter-spacing:0.03em; }
-  .sel-field input{ font-family:'IBM Plex Mono',monospace; font-size:0.88rem; padding:6px 8px; border:1.4px solid var(--border); background:var(--paper); color:var(--ink); width:80px; }
-  .sel-field input:focus{ outline:2px solid var(--accent-2); outline-offset:1px; }
-  .sel-field select{ font-family:'IBM Plex Mono',monospace; font-size:0.82rem; padding:6px 8px; border:1.4px solid var(--border); background:var(--paper); color:var(--ink); width:130px; }
-  .sel-field select:focus{ outline:2px solid var(--accent-2); outline-offset:1px; }
-
-  /* canvas */
-  .canvas-wrap{ margin-top:16px; border:1px solid var(--border); overflow:auto; max-height:78vh; }
-  canvas{ display:block; width:100%; height:auto; aspect-ratio:841/594; touch-action:none; cursor:crosshair; }
-  .tool-hint{ font-size:0.8rem; color:var(--ink-faint); margin-top:2px; }
-
-  /* save row */
-  .save-row{ display:flex; flex-wrap:wrap; gap:14px 20px; align-items:center; margin-top:18px; }
-  .save-btn{
-    font-family:'IBM Plex Sans KR',sans-serif; font-weight:600; font-size:0.95rem; padding:11px 22px;
-    background:var(--accent); color:var(--paper); border:none; cursor:pointer;
-  }
-  .save-btn:hover{ filter:brightness(1.06); }
-  .save-btn:disabled{ opacity:0.5; cursor:not-allowed; filter:none; }
-  .submit-btn{
-    font-family:'IBM Plex Sans KR',sans-serif; font-weight:600; font-size:0.95rem; padding:11px 22px;
-    background:var(--accent-2); color:var(--paper); border:none; cursor:pointer;
-  }
-  .submit-btn:hover{ filter:brightness(1.08); }
-  .submit-btn:disabled{ opacity:0.5; cursor:not-allowed; filter:none; }
-  .filename-preview{ font-family:'IBM Plex Mono',monospace; font-size:0.82rem; color:var(--ink-soft); }
-  .filename-preview strong{ color:var(--ink); font-weight:600; }
-  .save-status{ font-size:0.82rem; font-family:'IBM Plex Mono',monospace; min-height:1.2em; }
-  .save-status.ok{ color:var(--ok); }
-  .save-status.err{ color:var(--accent); }
 </style>
-</head>
-<body>
-<div class="page">
-<div class="sheet"><div class="sheet-inner">
 
-  <header class="titlebar">
-    <div>
-      <span class="doc-no">DWG NO. MAKER-AUTOMATA-02 · STUDENT SHEET</span>
-      <h1>내 오토마타 부품도 그리기</h1>
-      <p class="subtitle">직접 설계한 오토마타 부품을 자유롭게 그려보고, 그림을 PNG 파일로 저장하세요.</p>
-    </div>
-    <div class="meta-row">
-      <div class="meta-chip"><span>용지</span><strong>A1</strong></div>
-      <div class="meta-chip"><span>저장 형식</span><strong>PNG</strong></div>
-      <div class="meta-chip"><span>도구</span><strong>12종</strong></div>
-      <div class="meta-chip"><span>단위</span><strong>mm</strong></div>
-    </div>
-  </header>
+<!-- icon sprite -->
+<svg style="display:none" aria-hidden="true">
+  <defs>
+    <symbol id="icon-cafe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 8h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/>
+      <path d="M17 9h1.5a2.5 2.5 0 0 1 0 5H17"/>
+      <path d="M8 4.5c0-.9.9-.9.9-1.8M12 4.5c0-.9.9-.9.9-1.8"/>
+    </symbol>
+    <symbol id="icon-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4" y="4" width="7" height="7" rx="1.5"/>
+      <rect x="13" y="4" width="7" height="7" rx="1.5"/>
+      <rect x="4" y="13" width="7" height="7" rx="1.5"/>
+      <rect x="13" y="13" width="7" height="7" rx="1.5"/>
+    </symbol>
+    <symbol id="icon-cup-hot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 9h12v6a4.5 4.5 0 0 1-4.5 4.5h-3A4.5 4.5 0 0 1 5 15V9Z"/>
+      <path d="M17 10h1.3a2.2 2.2 0 0 1 0 4.4H17"/>
+      <path d="M9 5.2c0-1 .9-1 .9-2M13 5.2c0-1 .9-1 .9-2"/>
+    </symbol>
+    <symbol id="icon-cup-ice" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 8h12l-1.2 11.2a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.8L6 8Z"/>
+      <path d="M6.6 12.5h10.8M7.1 16h9.8"/>
+      <path d="M14 8V3.5M14 3.5l2-1.2"/>
+    </symbol>
+    <symbol id="icon-latte" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 9h12v6a4.5 4.5 0 0 1-4.5 4.5h-3A4.5 4.5 0 0 1 5 15V9Z"/>
+      <path d="M17 10h1.3a2.2 2.2 0 0 1 0 4.4H17"/>
+      <path d="M9.3 8c.5-1 2-1.6 2.7-.7.7-.9 2.2-.3 2.7.7"/>
+    </symbol>
+    <symbol id="icon-smoothie" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7 8h10l-1 10.5a2 2 0 0 1-2 1.8h-4a2 2 0 0 1-2-1.8L7 8Z"/>
+      <path d="M9.3 11.3c1.8 1 3.6-1 5.4 0"/>
+      <path d="M15.5 8V3l2.3-1.4"/>
+    </symbol>
+    <symbol id="icon-ade" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7.5 7.5h9l-.9 11a2 2 0 0 1-2 1.8h-3.2a2 2 0 0 1-2-1.8l-.9-11Z"/>
+      <circle cx="17.2" cy="6.2" r="2.4"/>
+      <path d="M17.2 3.8v4.8M15 6.2h4.4"/>
+      <path d="M13.5 7.5V3.2l2.1-1.3"/>
+    </symbol>
+    <symbol id="icon-tea" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 10h13v3.5A5.5 5.5 0 0 1 11.5 19h-2A5.5 5.5 0 0 1 4 13.5V10Z"/>
+      <path d="M17 11h1.5a2 2 0 0 1 0 4H17"/>
+      <path d="M12 10V6.5M12 6.5l2.3-1.4M12 6.5 9.7 5.1"/>
+    </symbol>
+    <symbol id="icon-pastry" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 16c1-5 4.5-9.5 9-10.5C15 9 17 12 20 12.5c-3 .5-5.5 3-7 6-1.8-3-4.5-2-9-2.5Z"/>
+    </symbol>
+    <symbol id="icon-muffin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 11c0-2.8 2.7-5 6-5s6 2.2 6 5"/>
+      <path d="M5 11h14l-1.3 7.3a2 2 0 0 1-2 1.7H8.3a2 2 0 0 1-2-1.7L5 11Z"/>
+      <path d="M6 11c.5-1.2 1.7-1.2 2.2 0M11 11c.5-1.2 1.7-1.2 2.2 0M16 11c.4-1 1.3-1 1.8 0"/>
+      <circle cx="9.5" cy="15" r=".6" fill="currentColor" stroke="none"/>
+      <circle cx="13.5" cy="16.2" r=".6" fill="currentColor" stroke="none"/>
+    </symbol>
+    <symbol id="icon-cake" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3.5 20 19H4L12 3.5Z"/>
+      <path d="M7.3 13.5h9.4"/>
+      <circle cx="12" cy="8" r=".6" fill="currentColor" stroke="none"/>
+    </symbol>
+    <symbol id="icon-macaron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 9.5c0-2 1.6-3.5 3.8-3.5h6.4c2.2 0 3.8 1.5 3.8 3.5S17.4 13 15.2 13H8.8C6.6 13 5 11.5 5 9.5Z"/>
+      <path d="M5 15.5c0-2 1.6-3.5 3.8-3.5h6.4c2.2 0 3.8 1.5 3.8 3.5S17.4 19 15.2 19H8.8C6.6 19 5 17.5 5 15.5Z"/>
+      <path d="M4.6 12.5h14.8"/>
+    </symbol>
+    <symbol id="icon-waffle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4" y="4" width="16" height="16" rx="3"/>
+      <path d="M4 9.3h16M4 14.7h16M9.3 4v16M14.7 4v16"/>
+    </symbol>
+    <symbol id="icon-store" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 9.5 5.2 4h13.6L20 9.5"/>
+      <path d="M4.5 9.5h15v8.7a1.8 1.8 0 0 1-1.8 1.8H6.3a1.8 1.8 0 0 1-1.8-1.8V9.5Z"/>
+      <path d="M9.5 20v-4.5a2.5 2.5 0 0 1 5 0V20"/>
+    </symbol>
+    <symbol id="icon-bag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6.5 8.5h11l1 11.5a1.6 1.6 0 0 1-1.6 1.7H7.1a1.6 1.6 0 0 1-1.6-1.7l1-11.5Z"/>
+      <path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/>
+    </symbol>
+    <symbol id="icon-basket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 10h14l-1.4 8.4a2 2 0 0 1-2 1.6H8.4a2 2 0 0 1-2-1.6L5 10Z"/>
+      <path d="M9 10 8 5M15 10l1-5M4 10h16"/>
+    </symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 12.5 10 17.5 19 7"/>
+    </symbol>
+    <symbol id="icon-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3.5" y="6" width="17" height="12" rx="2"/>
+      <path d="M3.5 10h17"/>
+      <path d="M7 14.5h4"/>
+    </symbol>
+    <symbol id="icon-cash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2.5" y="6.5" width="19" height="11" rx="1.8"/>
+      <circle cx="12" cy="12" r="2.6"/>
+      <path d="M5.5 9v6M18.5 9v6"/>
+    </symbol>
+    <symbol id="icon-qr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="6.5" height="6.5" rx="1"/>
+      <rect x="14.5" y="3" width="6.5" height="6.5" rx="1"/>
+      <rect x="3" y="14.5" width="6.5" height="6.5" rx="1"/>
+      <path d="M5.7 5.7h1.1v1.1H5.7zM17.2 5.7h1.1v1.1h-1.1zM5.7 17.2h1.1v1.1H5.7z" fill="currentColor" stroke="none"/>
+      <path d="M14.5 14.5h3v3h-3zM19.5 14.5h1.5v1.5h-1.5zM14.5 19.5h1.5v1.5h-1.5zM19.5 19.5h1.5v1.5h-1.5z" fill="currentColor" stroke="none"/>
+    </symbol>
+    <symbol id="icon-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 12H5M11 6l-6 6 6 6"/>
+    </symbol>
+    <symbol id="icon-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 6l12 12M18 6L6 18"/>
+    </symbol>
+    <symbol id="icon-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 10a6 6 0 0 1 12 0c0 4.2 1.5 5.5 1.5 5.5h-15S6 14.2 6 10Z"/>
+      <path d="M10 18.5a2 2 0 0 0 4 0"/>
+    </symbol>
+  </defs>
+</svg>
 
-  <section class="student-info">
-    <div class="section-label">학생 정보</div>
-    <div class="info-row">
-      <div class="field num">
-        <label for="numInput">번호</label>
-        <input id="numInput" type="text" inputmode="numeric" placeholder="12" maxlength="6">
+<div id="kiosk-root">
+<div class="stage">
+  <div class="kiosk">
+    <header class="kiosk__header">
+      <div class="brand">
+        <div class="brand__mark"><svg><use href="#icon-cafe"/></svg></div>
+        <div class="brand__text">
+          <div class="display">카페 울공</div>
+          <p>메뉴를 골라 담고, 결제까지 해보세요</p>
+        </div>
       </div>
-      <div class="field name">
-        <label for="nameInput">이름</label>
-        <input id="nameInput" type="text" placeholder="홍길동" maxlength="20">
+      <div class="header-actions">
+        <div class="order-type" role="group" aria-label="주문 방식">
+          <button type="button" data-order="dine" class="is-active"><svg><use href="#icon-store"/></svg>매장</button>
+          <button type="button" data-order="take"><svg><use href="#icon-bag"/></svg>포장</button>
+        </div>
+        <button type="button" class="help-btn" id="help-btn" aria-label="직원 호출">
+          <svg><use href="#icon-bell"/></svg>직원 호출
+        </button>
       </div>
-    </div>
-  </section>
+    </header>
 
-  <section class="drawing">
-    <div class="section-label">부품도 그리기</div>
-    <div class="tool-panel">
-      <div class="tool-row">
-        <div class="tool-group">
-          <span class="tool-group-label">도구</span>
-          <button class="tool-btn active" data-tool="pen" type="button">펜(자유곡선)</button>
-          <button class="tool-btn" data-tool="line" type="button">직선</button>
-          <button class="tool-btn" data-tool="dim" type="button">치수선</button>
-          <button class="tool-btn" data-tool="rect" type="button">사각형</button>
-          <button class="tool-btn" data-tool="circle" type="button">원</button>
-          <button class="tool-btn" data-tool="gear" type="button">기어</button>
-          <button class="tool-btn" data-tool="cam" type="button">캠</button>
-          <button class="tool-btn" data-tool="shaft" type="button">축</button>
-          <button class="tool-btn" data-tool="pin" type="button">핀</button>
-          <button class="tool-btn" data-tool="crank" type="button">크랭크축</button>
-          <button class="tool-btn" data-tool="eraser" type="button">지우개</button>
-          <button class="tool-btn" data-tool="select" type="button">선택(이동)</button>
+    <div class="kiosk__body">
+      <nav class="categories" id="categories" aria-label="메뉴 카테고리"></nav>
+
+      <main class="menu">
+        <div class="menu__heading">
+          <h2 class="display" id="menu-title">전체 메뉴</h2>
+          <span id="menu-count"></span>
         </div>
-      </div>
-      <div class="tool-row" id="camProfileRow" hidden>
-        <div class="tool-group">
-          <span class="tool-group-label">캠 모양</span>
-          <button class="tool-btn cam-profile-btn active" data-profile="eccentric" type="button">원형(편심)</button>
-          <button class="tool-btn cam-profile-btn" data-profile="snail" type="button">달팽이형(등속)</button>
-          <button class="tool-btn cam-profile-btn" data-profile="heart" type="button">하트형(왕복)</button>
-          <button class="tool-btn cam-profile-btn" data-profile="pear" type="button">배형(볼록)</button>
+        <div class="menu__grid" id="menu-grid"></div>
+      </main>
+
+      <aside class="cart" id="cart">
+        <button type="button" class="cart__summary-bar" id="cart-toggle">
+          <span><span class="count-pill num" id="bar-count">0</span>담긴 메뉴 · <span class="num" id="bar-total">0원</span></span>
+          <svg class="chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>
+        </button>
+        <div class="cart__head">
+          <h2 class="display">주문 내역</h2>
+          <span id="cart-item-count">0개</span>
         </div>
-      </div>
-      <div class="tool-row" id="gearTypeRow" hidden>
-        <div class="tool-group">
-          <span class="tool-group-label">기어 종류</span>
-          <button class="tool-btn gear-type-btn active" data-geartype="toothed" type="button">톱니바퀴(기본)</button>
-          <button class="tool-btn gear-type-btn" data-geartype="pegwheel" type="button">막대꽂이(핀휠)</button>
+        <div class="cart__list" id="cart-list">
+          <div class="cart__empty" id="cart-empty">
+            <svg><use href="#icon-basket"/></svg>
+            <div>장바구니가 비어 있어요<br>메뉴를 담아보세요</div>
+          </div>
         </div>
-      </div>
-      <div class="tool-row">
-        <div class="tool-group">
-          <span class="tool-group-label">색</span>
-          <button class="swatch active" data-color="#20242b" style="background:#20242b" type="button" aria-label="검정 (외형선)" title="검정 — 외형선"></button>
-          <button class="swatch" data-color="#b8412c" style="background:#b8412c" type="button" aria-label="빨강 (치수선)" title="빨강 — 치수선"></button>
-          <button class="swatch" data-color="#2c5f8a" style="background:#2c5f8a" type="button" aria-label="파랑 (참고선)" title="파랑 — 참고선"></button>
+        <div class="cart__foot">
+          <div class="cart__total-row">
+            <span>총 결제금액</span>
+            <span class="display num" id="cart-total">0원</span>
+          </div>
+          <div class="cart__receipt-row" id="receipt-toggle" role="group" aria-label="영수증 수령 여부">
+            <span>영수증</span>
+            <div class="temp-toggle">
+              <button type="button" data-receipt="yes" class="is-active">받기</button>
+              <button type="button" data-receipt="no">안 받기</button>
+            </div>
+          </div>
+          <button type="button" class="pay-btn" id="pay-btn" disabled>
+            <svg><use href="#icon-card"/></svg>
+            결제하기
+          </button>
         </div>
-        <div class="tool-group">
-          <span class="tool-group-label">굵기</span>
-          <button class="thick-btn" data-width="0.6" type="button">매우 얇게</button>
-          <button class="thick-btn active" data-width="1.6" type="button">얇게</button>
-          <button class="thick-btn" data-width="3.4" type="button">굵게</button>
-        </div>
-        <div class="tool-group">
-          <button class="ghost-btn" id="undoBtn" type="button" disabled>되돌리기</button>
-          <button class="ghost-btn" id="clearBtn" type="button" disabled>전체 지우기</button>
-        </div>
-      </div>
-      <div class="tool-row">
-        <div class="tool-group">
-          <span class="tool-group-label">화면 확대</span>
-          <button class="thick-btn zoom-btn active" data-zoom="100" type="button">100%</button>
-          <button class="thick-btn zoom-btn" data-zoom="200" type="button">200%</button>
-          <button class="thick-btn zoom-btn" data-zoom="400" type="button">400%</button>
-          <button class="thick-btn zoom-btn" data-zoom="800" type="button">800%</button>
-        </div>
-      </div>
-      <div class="canvas-wrap">
-        <canvas id="board" role="img" aria-label="부품도를 그리는 캔버스"></canvas>
-      </div>
-      <div class="selection-panel" id="selectionPanel" hidden>
-        <span class="sel-type-label" id="selTypeLabel">선택됨</span>
-        <div class="sel-fields" id="selFields"></div>
-        <button class="ghost-btn" id="selDeleteBtn" type="button">선택한 도형 삭제</button>
-        <button class="ghost-btn" id="selDoneBtn" type="button">선택 해제</button>
-      </div>
+      </aside>
     </div>
 
-    <div class="save-row">
-      <button class="save-btn" id="saveBtn" type="button">그림 저장 (PNG 다운로드)</button>
-      <span class="filename-preview" id="filenamePreview">번호와 이름을 입력하면 저장 파일명이 표시됩니다.</span>
+    <div class="help-toast" id="help-toast" hidden>
+      <svg><use href="#icon-bell"/></svg>직원을 호출했어요. 잠시만 기다려주세요!
     </div>
-    <div class="save-status" id="saveStatus"></div>
-    <div class="save-row submit-row" id="submitRow" hidden>
-      <button class="submit-btn" id="submitBtn" type="button">선생님께 제출하기</button>
-      <span class="filename-preview">완성된 그림을 선생님께 바로 전송합니다.</span>
-    </div>
-    <div class="save-status" id="submitStatus"></div>
-    <div class="save-row progress-row">
-      <button class="ghost-btn" id="saveProgressBtn" type="button">작업 저장 (이어하기용 파일)</button>
-      <button class="ghost-btn" id="loadProgressBtn" type="button">저장한 작업 불러오기</button>
-      <input type="file" id="loadProgressInput" accept="application/json,.json" hidden>
-    </div>
-    <div class="save-status" id="progressStatus"></div>
-  </section>
-
-</div></div>
+  </div>
+</div>
 </div>
 
+<div id="phone-root">
+  <div class="stage">
+    <div class="modal phone-card">
+      <div class="brand__mark" style="margin:0 auto 14px"><svg><use href="#icon-cafe"/></svg></div>
+      <div class="display" style="font-size:1.4rem">카페 울공</div>
+      <p class="phone-card__sub">간편결제 확인</p>
+
+      <div id="phone-pending">
+        <div class="phone-card__order-no" id="phone-order-no">주문번호 -</div>
+        <div class="order-number display num" id="phone-amount" style="font-size:1.9rem">0원</div>
+        <button type="button" class="pay-btn" id="phone-pay-btn" style="width:100%;margin-top:18px">
+          <svg><use href="#icon-card"/></svg>
+          결제 완료
+        </button>
+      </div>
+
+      <div id="phone-done" hidden>
+        <div class="check"><svg><use href="#icon-check"/></svg></div>
+        <div class="display">결제가 완료되었습니다</div>
+        <p class="phone-card__sub">이 창을 닫고 키오스크 화면으로<br>돌아가 주세요</p>
+      </div>
+
+      <div id="phone-invalid" hidden>
+        <p class="phone-card__sub">유효한 결제 정보를 찾을 수 없어요.<br>키오스크에서 QR코드를 다시 확인해주세요.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-veil" id="modal-veil">
+  <div class="modal" id="modal-body"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
-(function(){
-  // ============================================================
-  // 선생님 설정: 학생 제출 기능을 쓰려면 아래 따옴표 안에 Apps Script
-  // "제출 접수" 웹앱 배포 URL을 붙여넣고 이 파일을 다시 배포/업로드하세요.
-  // 비워두면(기본값) "선생님께 제출하기" 버튼이 화면에 나타나지 않습니다.
-  // 예: var SUBMIT_URL = 'https://script.google.com/macros/s/AKfycb.../exec';
-  // ============================================================
-  var SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbwODn5FbB4OH7XQ5nD31kC1sipXuA3zn5UTxI1RRC8VUQFlA88LJc2W82LnUVTmC5wN/exec';
+(function () {
+  "use strict";
 
-  var canvas = document.getElementById('board');
-  var ctx = canvas.getContext('2d');
-  var canvasWrap = document.querySelector('.canvas-wrap');
-  var LW = 841, LH = 594; // A1 (ISO 216) landscape sheet, 1 unit = 1mm
-  var STAMP_H = 46;
-  var dpr = window.devicePixelRatio || 1;
-  var zoomPct = 100;
-  var canvasScale = 1;
-  // Offscreen "ink" layer: holds only the drawn elements (including eraser
-  // strokes, punched out with destination-out). The background/grid is drawn
-  // straight onto the main canvas and is never touched by the eraser.
-  var inkCanvas = document.createElement('canvas');
-  var inkCtx = inkCanvas.getContext('2d');
+  // Works wherever this page is hosted (GitHub Pages included) — the QR
+  // simply links back to this same page's own URL, stripped of any query.
+  var BASE_URL = window.location.origin + window.location.pathname;
+  var kioskRoot = document.getElementById("kiosk-root");
+  var phoneRoot = document.getElementById("phone-root");
+  var searchParams = new URLSearchParams(window.location.search);
 
-  function resizeCanvasBacking(){
-    dpr = window.devicePixelRatio || 1;
-    var scale = dpr * (zoomPct / 100);
-    canvasScale = scale;
-    canvas.width = Math.round(LW * scale);
-    canvas.height = Math.round(LH * scale);
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.scale(scale, scale);
-    inkCanvas.width = canvas.width;
-    inkCanvas.height = canvas.height;
-    inkCtx.setTransform(1, 0, 0, 1, 0, 0);
-    inkCtx.scale(scale, scale);
+  // A QR code generated on the kiosk links back to this SAME page with
+  // ?pay=1, so scanning it opens a self-contained payment-confirmation
+  // screen — no server or account needed, the order details travel in
+  // the link itself.
+  if (searchParams.get("pay") === "1") {
+    initPhoneView();
+    return;
   }
-  resizeCanvasBacking();
+  kioskRoot.style.display = "contents";
 
-  var PAPER = '#faf7ef';
-  var GRID_MINOR = 'rgba(32,36,43,0.07)';
-  var GRID_MAJOR = 'rgba(32,36,43,0.16)';
-  var FRAME = 'rgba(32,36,43,0.55)';
+  function initPhoneView() {
+    phoneRoot.style.display = "block";
+    var total = parseInt(searchParams.get("total"), 10);
+    var order = searchParams.get("order");
+    var pendingEl = document.getElementById("phone-pending");
+    var doneEl = document.getElementById("phone-done");
+    var invalidEl = document.getElementById("phone-invalid");
 
-  var tool = 'pen';
-  var color = '#20242b';
-  var strokeWidth = 1.6;
-  var elements = [];
-  var drawing = false;
-  var startPt = null;
-  var freehandPoints = null;
-  var MAX_ELEMENTS = 500;
-  var MAX_TOTAL_POINTS = 6000;
-  var totalPoints = 0;
-  var shiftPressed = false;
-  var selectedIndices = [];
-  var dragMode = null;
-  var dragAnchor = null;
-  var dragOriginals = null;
-  var marqueeStart = null;
-  var marqueeCurrent = null;
-  var resizeHandle = null;
-  var resizeIndex = null;
-  var clipboard = null;
-  var HANDLE_SIZE = 9;
-  var camProfile = 'eccentric';
-  var CAM_PROFILES = [
-    { value: 'eccentric', label: '원형(편심)' },
-    { value: 'snail', label: '달팽이형(등속)' },
-    { value: 'heart', label: '하트형(왕복)' },
-    { value: 'pear', label: '배형(볼록)' }
+    if (!total || !order) {
+      pendingEl.hidden = true;
+      invalidEl.hidden = false;
+      return;
+    }
+
+    document.getElementById("phone-order-no").textContent = "주문번호 " + order;
+    document.getElementById("phone-amount").textContent = (total).toLocaleString("ko-KR") + "원";
+    document.getElementById("phone-pay-btn").addEventListener("click", function () {
+      pendingEl.hidden = true;
+      doneEl.hidden = false;
+    });
+  }
+
+  var CATEGORIES = [
+    { id: "all", label: "전체", icon: "icon-grid" },
+    { id: "coffee", label: "커피", icon: "icon-cup-hot" },
+    { id: "drink", label: "음료", icon: "icon-ade" },
+    { id: "tea", label: "티", icon: "icon-tea" },
+    { id: "dessert", label: "디저트", icon: "icon-cake" }
   ];
-  function camProfileLabel(v){
-    var f = CAM_PROFILES.filter(function(p){ return p.value === v; })[0];
-    return f ? f.label : v;
-  }
-  var gearType = 'toothed';
-  var GEAR_TYPES = [
-    { value: 'toothed', label: '톱니바퀴(기본)' },
-    { value: 'pegwheel', label: '막대꽂이(핀휠)' }
+
+  // temp: 'hot' | 'ice' | 'both'  (iceSurcharge applies only when temp === 'both')
+  var MENU = [
+    { id: "americano", name: "아메리카노", category: "coffee", icon: "icon-cup-hot", price: 3000, temp: "both", iceSurcharge: 500 },
+    { id: "latte", name: "카페라떼", category: "coffee", icon: "icon-latte", price: 4000, temp: "both", iceSurcharge: 500 },
+    { id: "vanilla-latte", name: "바닐라라떼", category: "coffee", icon: "icon-latte", price: 4500, temp: "both", iceSurcharge: 500 },
+    { id: "cappuccino", name: "카푸치노", category: "coffee", icon: "icon-latte", price: 4200, temp: "both", iceSurcharge: 500 },
+    { id: "caramel-macchiato", name: "카라멜마키아토", category: "coffee", icon: "icon-latte", price: 4800, temp: "both", iceSurcharge: 500 },
+    { id: "cold-brew", name: "콜드브루", category: "coffee", icon: "icon-cup-ice", price: 4300, temp: "ice" },
+
+    { id: "choco-latte", name: "초코라떼", category: "drink", icon: "icon-latte", price: 4500, temp: "both", iceSurcharge: 500 },
+    { id: "strawberry-smoothie", name: "딸기스무디", category: "drink", icon: "icon-smoothie", price: 5000, temp: "ice" },
+    { id: "mango-smoothie", name: "망고스무디", category: "drink", icon: "icon-smoothie", price: 5200, temp: "ice" },
+    { id: "grapefruit-ade", name: "자몽에이드", category: "drink", icon: "icon-ade", price: 4800, temp: "ice" },
+    { id: "lemonade", name: "레모네이드", category: "drink", icon: "icon-ade", price: 4500, temp: "ice" },
+
+    { id: "chamomile", name: "캐모마일티", category: "tea", icon: "icon-tea", price: 4000, temp: "hot" },
+    { id: "yuzu-tea", name: "유자차", category: "tea", icon: "icon-tea", price: 4200, temp: "both", iceSurcharge: 500 },
+    { id: "earl-grey", name: "얼그레이", category: "tea", icon: "icon-tea", price: 4000, temp: "hot" },
+
+    { id: "croissant", name: "크루아상", category: "dessert", icon: "icon-pastry", price: 3500, temp: null },
+    { id: "choco-muffin", name: "초코머핀", category: "dessert", icon: "icon-muffin", price: 3800, temp: null },
+    { id: "cheesecake", name: "치즈케이크", category: "dessert", icon: "icon-cake", price: 5500, temp: null },
+    { id: "macaron", name: "마카롱 (2입)", category: "dessert", icon: "icon-macaron", price: 4000, temp: null },
+    { id: "waffle", name: "와플", category: "dessert", icon: "icon-waffle", price: 5000, temp: null }
   ];
-  function gearTypeLabel(v){
-    var f = GEAR_TYPES.filter(function(p){ return p.value === v; })[0];
-    return f ? f.label : v;
+
+  var CATEGORY_TINT = { coffee: "gold", drink: "sage", tea: "plum", dessert: "toast" };
+  var TINT_COLORS = {
+    gold: { bg: "var(--gold-soft)", fg: "var(--gold)" },
+    sage: { bg: "#e3ece8", fg: "var(--sage)" },
+    plum: { bg: "#ece3ee", fg: "var(--plum)" },
+    toast: { bg: "#ece2d6", fg: "var(--toast)" }
+  };
+
+  var SIZE_UPCHARGE = 700;
+  var SHOT_PRICE = 500;
+  var MAX_SHOTS = 3;
+
+  function hasSizeOption(item) { return item.category !== "dessert"; }
+  function isCoffee(item) { return item.category === "coffee"; }
+
+  var state = {
+    category: "all",
+    orderType: "dine",
+    receiptChoice: "yes", // 'yes' | 'no'
+    cardTemp: {},        // id -> 'hot' | 'ice'
+    cardSize: {},        // id -> 'R' | 'L'
+    cardShot: {},        // id -> 0..MAX_SHOTS
+    cardDecaf: {},       // id -> boolean
+    cardOptionsOpen: {}, // id -> boolean
+    cardQty: {},         // id -> integer
+    cart: []             // { key, id, name, temp, size, shot, decaf, unitPrice, qty }
+  };
+
+  function won(n) { return n.toLocaleString("ko-KR") + "원"; }
+
+  function tempDefault(item) {
+    if (item.temp === "both") return "ice";
+    return item.temp;
   }
 
-  window.addEventListener('keydown', function(e){ if (e.key === 'Shift') shiftPressed = true; });
-  window.addEventListener('keyup', function(e){ if (e.key === 'Shift') shiftPressed = false; });
-  window.addEventListener('blur', function(){ shiftPressed = false; });
+  MENU.forEach(function (item) {
+    state.cardTemp[item.id] = tempDefault(item);
+    state.cardSize[item.id] = "R";
+    state.cardShot[item.id] = 0;
+    state.cardDecaf[item.id] = false;
+    state.cardOptionsOpen[item.id] = false;
+    state.cardQty[item.id] = 1;
+  });
 
-  function isFreehandTool(t){ return t === 'pen' || t === 'eraser'; }
-
-  function makeFreehandElement(t, points){
-    return t === 'eraser'
-      ? { type: 'eraser', points: points, color: PAPER, width: strokeWidth * 9 }
-      : { type: 'freehand', points: points, color: color, width: strokeWidth };
+  function unitPriceFor(item, opts) {
+    var price = item.price;
+    if (item.temp === "both" && opts.temp === "ice") price += item.iceSurcharge;
+    if (hasSizeOption(item) && opts.size === "L") price += SIZE_UPCHARGE;
+    if (isCoffee(item) && opts.shot) price += opts.shot * SHOT_PRICE;
+    return price;
   }
 
-  function constrainEnd(toolName, start, raw){
-    if (!shiftPressed) return raw;
-    if (toolName === 'line' || toolName === 'dim' || toolName === 'shaft' || toolName === 'pin' || toolName === 'crank') {
-      var dx = raw.x - start.x, dy = raw.y - start.y;
-      var dist = Math.hypot(dx, dy);
-      if (dist < 0.001) return raw;
-      var angle = Math.atan2(dy, dx);
-      var step = Math.PI / 4;
-      var snapped = Math.round(angle / step) * step;
-      return { x: start.x + Math.cos(snapped) * dist, y: start.y + Math.sin(snapped) * dist };
-    }
-    if (toolName === 'rect') {
-      var dx2 = raw.x - start.x, dy2 = raw.y - start.y;
-      var side = Math.max(Math.abs(dx2), Math.abs(dy2));
-      var sx = dx2 < 0 ? -1 : 1, sy = dy2 < 0 ? -1 : 1;
-      return { x: start.x + sx * side, y: start.y + sy * side };
-    }
-    return raw;
+  function priceBreakdown(item, opts) {
+    var parts = [];
+    if (item.temp === "both" && opts.temp === "ice") parts.push("ICE +" + won(item.iceSurcharge));
+    if (hasSizeOption(item) && opts.size === "L") parts.push("L +" + won(SIZE_UPCHARGE));
+    if (isCoffee(item) && opts.shot) parts.push("샷" + opts.shot + " +" + won(opts.shot * SHOT_PRICE));
+    if (isCoffee(item) && opts.decaf) parts.push("디카페인");
+    return parts;
   }
 
-  function getBounds(el){
-    if (el.points) {
-      var xs = el.points.map(function(p){ return p.x; });
-      var ys = el.points.map(function(p){ return p.y; });
-      return { minX: Math.min.apply(null, xs), minY: Math.min.apply(null, ys), maxX: Math.max.apply(null, xs), maxY: Math.max.apply(null, ys) };
-    }
-    if (el.type === 'circle' || el.type === 'gear' || el.type === 'cam') {
-      var r = Math.hypot(el.x2 - el.x1, el.y2 - el.y1);
-      return { minX: el.x1 - r, minY: el.y1 - r, maxX: el.x1 + r, maxY: el.y1 + r };
-    }
-    if (el.type === 'dim') {
-      var pad = 16;
-      return { minX: Math.min(el.x1, el.x2) - pad, minY: Math.min(el.y1, el.y2) - pad, maxX: Math.max(el.x1, el.x2) + pad, maxY: Math.max(el.y1, el.y2) + pad };
-    }
-    if (el.type === 'shaft' || el.type === 'pin') {
-      var half2 = (el.thick != null ? el.thick : 16) / 2;
-      return { minX: Math.min(el.x1, el.x2) - half2, minY: Math.min(el.y1, el.y2) - half2, maxX: Math.max(el.x1, el.x2) + half2, maxY: Math.max(el.y1, el.y2) + half2 };
-    }
-    if (el.type === 'crank') {
-      var cp = crankPoints(el);
-      var chalf = (el.thick != null ? el.thick : 14) / 2;
-      var cxs = cp.map(function(p){ return p.x; }), cys = cp.map(function(p){ return p.y; });
-      return { minX: Math.min.apply(null, cxs) - chalf, minY: Math.min.apply(null, cys) - chalf, maxX: Math.max.apply(null, cxs) + chalf, maxY: Math.max.apply(null, cys) + chalf };
-    }
-    return { minX: Math.min(el.x1, el.x2), minY: Math.min(el.y1, el.y2), maxX: Math.max(el.x1, el.x2), maxY: Math.max(el.y1, el.y2) };
+  function lineOptions(line) {
+    var parts = [];
+    var t = tempLabel(line.temp);
+    if (t) parts.push(t);
+    if (line.size === "L") parts.push("Large");
+    if (line.shot) parts.push("샷+" + line.shot);
+    if (line.decaf) parts.push("디카페인");
+    return parts.join(" · ");
   }
 
-  function groupBounds(indices){
-    var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    indices.forEach(function(i){
-      var b = getBounds(elements[i]);
-      minX = Math.min(minX, b.minX); minY = Math.min(minY, b.minY);
-      maxX = Math.max(maxX, b.maxX); maxY = Math.max(maxY, b.maxY);
+  // ---------- category rail ----------
+
+  var categoriesEl = document.getElementById("categories");
+  CATEGORIES.forEach(function (cat) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cat-btn" + (cat.id === state.category ? " is-active" : "");
+    btn.dataset.cat = cat.id;
+    btn.innerHTML = '<svg><use href="#' + cat.icon + '"/></svg><span class="cat-label">' + cat.label + "</span>";
+    btn.addEventListener("click", function () {
+      state.category = cat.id;
+      renderCategories();
+      renderMenu();
     });
-    return { minX: minX, minY: minY, maxX: maxX, maxY: maxY };
-  }
+    categoriesEl.appendChild(btn);
+  });
 
-  function rectsIntersect(a, b){
-    return a.minX <= b.maxX && a.maxX >= b.minX && a.minY <= b.maxY && a.maxY >= b.minY;
-  }
-
-  function getResizeHandles(el){
-    if (el.type === 'rect') {
-      var left = Math.min(el.x1, el.x2), right = Math.max(el.x1, el.x2);
-      var top = Math.min(el.y1, el.y2), bottom = Math.max(el.y1, el.y2);
-      return [
-        { id: 'tl', x: left, y: top }, { id: 'tr', x: right, y: top },
-        { id: 'bl', x: left, y: bottom }, { id: 'br', x: right, y: bottom }
-      ];
-    }
-    if (el.type === 'circle' || el.type === 'gear' || el.type === 'cam') {
-      var r = Math.hypot(el.x2 - el.x1, el.y2 - el.y1);
-      return [{ id: 'r', x: el.x1 + r, y: el.y1 }];
-    }
-    if (el.type === 'line' || el.type === 'dim' || el.type === 'shaft' || el.type === 'pin' || el.type === 'crank') {
-      return [{ id: 'p1', x: el.x1, y: el.y1 }, { id: 'p2', x: el.x2, y: el.y2 }];
-    }
-    return [];
-  }
-
-  function hitTestHandle(p, el){
-    var handles = getResizeHandles(el);
-    var HP = 9;
-    for (var i = 0; i < handles.length; i++) {
-      var h = handles[i];
-      if (Math.abs(p.x - h.x) <= HP && Math.abs(p.y - h.y) <= HP) return h.id;
-    }
-    return null;
-  }
-
-  function cursorForHandle(id){
-    if (id === 'tl' || id === 'br') return 'nwse-resize';
-    if (id === 'tr' || id === 'bl') return 'nesw-resize';
-    if (id === 'r') return 'ew-resize';
-    if (id === 'p1' || id === 'p2') return 'crosshair';
-    return 'pointer';
-  }
-
-  function drawHandles(el){
-    var handles = getResizeHandles(el);
-    if (!handles.length) return;
-    ctx.save();
-    handles.forEach(function(h){
-      ctx.fillStyle = '#faf7ef';
-      ctx.strokeStyle = '#2c5f8a';
-      ctx.lineWidth = 1.6;
-      ctx.beginPath();
-      ctx.rect(h.x - HANDLE_SIZE / 2, h.y - HANDLE_SIZE / 2, HANDLE_SIZE, HANDLE_SIZE);
-      ctx.fill();
-      ctx.stroke();
+  function renderCategories() {
+    Array.prototype.forEach.call(categoriesEl.children, function (btn) {
+      btn.classList.toggle("is-active", btn.dataset.cat === state.category);
     });
-    ctx.restore();
   }
 
-  function computeResize(orig, handleId, p){
-    if (orig.type === 'rect') {
-      var left = Math.min(orig.x1, orig.x2), right = Math.max(orig.x1, orig.x2);
-      var top = Math.min(orig.y1, orig.y2), bottom = Math.max(orig.y1, orig.y2);
-      if (handleId === 'tl') { left = p.x; top = p.y; }
-      else if (handleId === 'tr') { right = p.x; top = p.y; }
-      else if (handleId === 'bl') { left = p.x; bottom = p.y; }
-      else if (handleId === 'br') { right = p.x; bottom = p.y; }
-      if (right - left < 4) { if (handleId === 'tl' || handleId === 'bl') left = right - 4; else right = left + 4; }
-      if (bottom - top < 4) { if (handleId === 'tl' || handleId === 'tr') top = bottom - 4; else bottom = top + 4; }
-      return Object.assign({}, orig, { x1: left, y1: top, x2: right, y2: bottom });
-    }
-    if (orig.type === 'circle' || orig.type === 'gear' || orig.type === 'cam') {
-      var r = Math.max(0.5, Math.hypot(p.x - orig.x1, p.y - orig.y1));
-      return Object.assign({}, orig, { x2: orig.x1 + r, y2: orig.y1 });
-    }
-    if (orig.type === 'line' || orig.type === 'dim' || orig.type === 'shaft' || orig.type === 'pin' || orig.type === 'crank') {
-      var fixed = handleId === 'p1' ? { x: orig.x2, y: orig.y2 } : { x: orig.x1, y: orig.y1 };
-      var moved = constrainEnd(orig.type, fixed, p);
-      var updated = Object.assign({}, orig);
-      if (handleId === 'p1') { updated.x1 = moved.x; updated.y1 = moved.y; }
-      else { updated.x2 = moved.x; updated.y2 = moved.y; }
-      if (orig.type === 'dim') {
-        var oldLen = Math.round(Math.hypot(orig.x2 - orig.x1, orig.y2 - orig.y1));
-        var wasAuto = orig.label == null || orig.label === String(oldLen);
-        if (wasAuto) updated.label = String(Math.round(Math.hypot(updated.x2 - updated.x1, updated.y2 - updated.y1)));
-      }
-      return updated;
-    }
-    return orig;
+  // ---------- menu grid ----------
+
+  var menuGrid = document.getElementById("menu-grid");
+  var menuTitle = document.getElementById("menu-title");
+  var menuCount = document.getElementById("menu-count");
+
+  function itemsFor(catId) {
+    if (catId === "all") return MENU;
+    return MENU.filter(function (m) { return m.category === catId; });
   }
 
-  function hitTest(p){
-    var PAD = 10;
-    for (var i = elements.length - 1; i >= 0; i--) {
-      var b = getBounds(elements[i]);
-      if (p.x >= b.minX - PAD && p.x <= b.maxX + PAD && p.y >= b.minY - PAD && p.y <= b.maxY + PAD) return i;
-    }
-    return -1;
-  }
+  function renderMenu() {
+    var cat = CATEGORIES.filter(function (c) { return c.id === state.category; })[0];
+    var items = itemsFor(state.category);
+    menuTitle.textContent = cat.label + (cat.id === "all" ? " 메뉴" : "");
+    menuCount.textContent = items.length + "종";
+    menuGrid.innerHTML = "";
 
-  function cloneElement(el){
-    return el.points ? Object.assign({}, el, { points: el.points.map(function(p){ return { x: p.x, y: p.y }; }) }) : Object.assign({}, el);
-  }
+    items.forEach(function (item) {
+      var tint = TINT_COLORS[CATEGORY_TINT[item.category]];
+      var card = document.createElement("div");
+      card.className = "card";
 
-  function translateElement(el, dx, dy){
-    if (el.points) return Object.assign({}, el, { points: el.points.map(function(p){ return { x: p.x + dx, y: p.y + dy }; }) });
-    return Object.assign({}, el, { x1: el.x1 + dx, y1: el.y1 + dy, x2: el.x2 + dx, y2: el.y2 + dy });
-  }
-
-  function typeLabel(t){
-    return { freehand: '자유곡선', line: '직선', dim: '치수선', rect: '사각형', circle: '원', gear: '기어', cam: '캠', shaft: '축', pin: '핀', crank: '크랭크축', eraser: '지우개 자국' }[t] || t;
-  }
-
-  function elementMetrics(el){
-    if (el.points) {
-      var b = getBounds(el);
-      return { x: Math.round(b.minX), y: Math.round(b.minY) };
-    }
-    if (el.type === 'line' || el.type === 'dim') {
-      var len = Math.hypot(el.x2 - el.x1, el.y2 - el.y1);
-      var ang = Math.atan2(el.y2 - el.y1, el.x2 - el.x1) * 180 / Math.PI;
-      if (ang < 0) ang += 360;
-      return { x: Math.round(el.x1), y: Math.round(el.y1), len: Math.round(len), angle: Math.round(ang) };
-    }
-    if (el.type === 'rect') {
-      return { x: Math.round(Math.min(el.x1, el.x2)), y: Math.round(Math.min(el.y1, el.y2)), w: Math.round(Math.abs(el.x2 - el.x1)), h: Math.round(Math.abs(el.y2 - el.y1)) };
-    }
-    if (el.type === 'circle') {
-      return { x: Math.round(el.x1), y: Math.round(el.y1), r: Math.round(Math.hypot(el.x2 - el.x1, el.y2 - el.y1)) };
-    }
-    if (el.type === 'gear') {
-      var gm = { x: Math.round(el.x1), y: Math.round(el.y1), r: Math.round(Math.hypot(el.x2 - el.x1, el.y2 - el.y1)), gearType: el.gearType || 'toothed' };
-      if ((el.gearType || 'toothed') === 'pegwheel') gm.pegCount = el.pegCount || 8;
-      else gm.teeth = el.teeth || 12;
-      return gm;
-    }
-    if (el.type === 'cam') {
-      return { x: Math.round(el.x1), y: Math.round(el.y1), r: Math.round(Math.hypot(el.x2 - el.x1, el.y2 - el.y1)), profile: el.profile || 'eccentric' };
-    }
-    if (el.type === 'shaft' || el.type === 'pin') {
-      var slen = Math.hypot(el.x2 - el.x1, el.y2 - el.y1);
-      var sang = Math.atan2(el.y2 - el.y1, el.x2 - el.x1) * 180 / Math.PI;
-      if (sang < 0) sang += 360;
-      return { x: Math.round(el.x1), y: Math.round(el.y1), len: Math.round(slen), angle: Math.round(sang), thick: el.thick != null ? el.thick : (el.type === 'shaft' ? 16 : 8) };
-    }
-    if (el.type === 'crank') {
-      var klen = Math.hypot(el.x2 - el.x1, el.y2 - el.y1);
-      var kang = Math.atan2(el.y2 - el.y1, el.x2 - el.x1) * 180 / Math.PI;
-      if (kang < 0) kang += 360;
-      return { x: Math.round(el.x1), y: Math.round(el.y1), len: Math.round(klen), angle: Math.round(kang), offset: el.offset != null ? el.offset : 18, thick: el.thick != null ? el.thick : 14 };
-    }
-    return { x: 0, y: 0 };
-  }
-
-  var selectionPanel = document.getElementById('selectionPanel');
-  var selTypeLabel = document.getElementById('selTypeLabel');
-  var selFields = document.getElementById('selFields');
-  var selDeleteBtn = document.getElementById('selDeleteBtn');
-  var selDoneBtn = document.getElementById('selDoneBtn');
-
-  function fieldHtml(id, label, value){
-    return '<div class="sel-field"><label for="' + id + '">' + label + '</label><input type="number" id="' + id + '" value="' + value + '"></div>';
-  }
-  function fieldHtmlText(id, label, value){
-    return '<div class="sel-field"><label for="' + id + '">' + label + '</label><input type="text" id="' + id + '" value="' + String(value).replace(/"/g, '&quot;') + '"></div>';
-  }
-  function fieldHtmlSelect(id, label, options, value){
-    var opts = options.map(function(o){
-      return '<option value="' + o.value + '"' + (o.value === value ? ' selected' : '') + '>' + o.label + '</option>';
-    }).join('');
-    return '<div class="sel-field"><label for="' + id + '">' + label + '</label><select id="' + id + '">' + opts + '</select></div>';
-  }
-
-  function buildSelectionPanel(){
-    if (selectedIndices.length === 0) { selectionPanel.hidden = true; return; }
-    if (selectedIndices.length > 1) {
-      selTypeLabel.textContent = '선택됨 · ' + selectedIndices.length + '개';
-      var gb = groupBounds(selectedIndices);
-      selFields.innerHTML = fieldHtml('selX', 'X(mm)', Math.round(gb.minX)) + fieldHtml('selY', 'Y(mm)', Math.round(gb.minY));
-      Array.prototype.forEach.call(selFields.querySelectorAll('input, select'), function(inp){
-        inp.addEventListener('change', onFieldCommit);
-        inp.addEventListener('keydown', function(e){ if (e.key === 'Enter') inp.blur(); });
-      });
-      selectionPanel.hidden = false;
-      return;
-    }
-    var el = elements[selectedIndices[0]];
-    selTypeLabel.textContent = el.type === 'cam' ? ('선택됨 · 캠(' + camProfileLabel(el.profile) + ')') : (el.type === 'gear' ? ('선택됨 · 기어(' + gearTypeLabel(el.gearType || 'toothed') + ')') : ('선택됨 · ' + typeLabel(el.type)));
-    var m = elementMetrics(el);
-    var html = fieldHtml('selX', 'X(mm)', m.x) + fieldHtml('selY', 'Y(mm)', m.y);
-    if (el.type === 'dim') html += fieldHtml('selLen', '길이(mm)', m.len) + fieldHtml('selAngle', '각도(°)', m.angle) + fieldHtmlText('selLabel', '치수 표시', el.label != null ? el.label : m.len);
-    else if (el.type === 'line') html += fieldHtml('selLen', '길이(mm)', m.len) + fieldHtml('selAngle', '각도(°)', m.angle);
-    else if (el.type === 'rect') html += fieldHtml('selW', '가로(mm)', m.w) + fieldHtml('selH', '세로(mm)', m.h);
-    else if (el.type === 'circle') html += fieldHtml('selR', '반지름(mm)', m.r);
-    else if (el.type === 'gear') {
-      html += fieldHtml('selR', '반지름(mm)', m.r) + fieldHtmlSelect('selGearType', '기어 종류', GEAR_TYPES, el.gearType || 'toothed');
-      html += (m.gearType === 'pegwheel') ? fieldHtml('selPegCount', '막대 개수', m.pegCount) : fieldHtml('selTeeth', '이 개수', m.teeth);
-    }
-    else if (el.type === 'cam') html += fieldHtml('selR', '반지름(mm)', m.r) + fieldHtmlSelect('selProfile', '캠 모양', CAM_PROFILES, el.profile || 'eccentric');
-    else if (el.type === 'shaft' || el.type === 'pin') html += fieldHtml('selLen', '길이(mm)', m.len) + fieldHtml('selAngle', '각도(°)', m.angle) + fieldHtml('selThick', '굵기(mm)', m.thick);
-    else if (el.type === 'crank') html += fieldHtml('selLen', '전체 길이(mm)', m.len) + fieldHtml('selAngle', '각도(°)', m.angle) + fieldHtml('selOffset', '꺾임 폭(mm)', m.offset) + fieldHtml('selThick', '굵기(mm)', m.thick);
-    selFields.innerHTML = html;
-    Array.prototype.forEach.call(selFields.querySelectorAll('input, select'), function(inp){
-      inp.addEventListener('change', onFieldCommit);
-      inp.addEventListener('keydown', function(e){ if (e.key === 'Enter') inp.blur(); });
-    });
-    selectionPanel.hidden = false;
-  }
-
-  function setFieldVal(id, v){
-    var el = document.getElementById(id);
-    if (el && document.activeElement !== el) el.value = v;
-  }
-
-  function updateSelectionValues(){
-    if (selectedIndices.length === 0) return;
-    if (selectedIndices.length > 1) {
-      var gb = groupBounds(selectedIndices);
-      setFieldVal('selX', Math.round(gb.minX)); setFieldVal('selY', Math.round(gb.minY));
-      return;
-    }
-    var m = elementMetrics(elements[selectedIndices[0]]);
-    setFieldVal('selX', m.x); setFieldVal('selY', m.y);
-    if ('len' in m) setFieldVal('selLen', m.len);
-    if ('angle' in m) setFieldVal('selAngle', m.angle);
-    if ('w' in m) setFieldVal('selW', m.w);
-    if ('h' in m) setFieldVal('selH', m.h);
-    if ('r' in m) setFieldVal('selR', m.r);
-    if ('teeth' in m) setFieldVal('selTeeth', m.teeth);
-    if ('pegCount' in m) setFieldVal('selPegCount', m.pegCount);
-    if ('thick' in m) setFieldVal('selThick', m.thick);
-    if ('offset' in m) setFieldVal('selOffset', m.offset);
-  }
-
-  function onFieldCommit(){
-    if (selectedIndices.length === 0) return;
-    if (selectedIndices.length > 1) {
-      var gb = groupBounds(selectedIndices);
-      var xInput2 = document.getElementById('selX'), yInput2 = document.getElementById('selY');
-      var gx = parseFloat(xInput2.value); if (isNaN(gx)) gx = gb.minX;
-      var gy = parseFloat(yInput2.value); if (isNaN(gy)) gy = gb.minY;
-      var gdx = gx - gb.minX, gdy = gy - gb.minY;
-      selectedIndices.forEach(function(i){ elements[i] = translateElement(elements[i], gdx, gdy); });
-      redraw();
-      updateSelectionValues();
-      return;
-    }
-    var selectedIndex = selectedIndices[0];
-    var el = elements[selectedIndex];
-    var m = elementMetrics(el);
-    var xInput = document.getElementById('selX'), yInput = document.getElementById('selY');
-    var x = parseFloat(xInput.value); if (isNaN(x)) x = m.x;
-    var y = parseFloat(yInput.value); if (isNaN(y)) y = m.y;
-    var updated;
-    if (el.points) {
-      var b = getBounds(el);
-      updated = translateElement(el, x - b.minX, y - b.minY);
-    } else if (el.type === 'line' || el.type === 'dim') {
-      var len = Math.max(1, parseFloat(document.getElementById('selLen').value) || m.len);
-      var ang = parseFloat(document.getElementById('selAngle').value); if (isNaN(ang)) ang = m.angle;
-      var rad = ang * Math.PI / 180;
-      updated = Object.assign({}, el, { x1: x, y1: y, x2: x + Math.cos(rad) * len, y2: y + Math.sin(rad) * len });
-      if (el.type === 'dim') {
-        var labelInput = document.getElementById('selLabel');
-        updated.label = labelInput && labelInput.value !== '' ? labelInput.value : String(Math.round(len));
-      }
-    } else if (el.type === 'rect') {
-      var w = Math.max(1, parseFloat(document.getElementById('selW').value) || m.w);
-      var h = Math.max(1, parseFloat(document.getElementById('selH').value) || m.h);
-      updated = Object.assign({}, el, { x1: x, y1: y, x2: x + w, y2: y + h });
-    } else if (el.type === 'circle') {
-      var r = Math.max(0.5, parseFloat(document.getElementById('selR').value) || m.r);
-      updated = Object.assign({}, el, { x1: x, y1: y, x2: x + r, y2: y });
-    } else if (el.type === 'gear') {
-      var gr = Math.max(4, parseFloat(document.getElementById('selR').value) || m.r);
-      var gearTypeSel = document.getElementById('selGearType');
-      var newGearType = gearTypeSel ? gearTypeSel.value : (el.gearType || 'toothed');
-      updated = Object.assign({}, el, { x1: x, y1: y, x2: x + gr, y2: y, gearType: newGearType });
-      if (newGearType === 'pegwheel') {
-        var pegInput = document.getElementById('selPegCount');
-        var pegCount = pegInput ? Math.round(parseFloat(pegInput.value)) : NaN;
-        if (isNaN(pegCount)) pegCount = m.pegCount || 8;
-        pegCount = Math.max(3, Math.min(48, pegCount));
-        updated.pegCount = pegCount;
+      var tempMarkup;
+      if (item.temp === "both") {
+        var cur = state.cardTemp[item.id];
+        tempMarkup =
+          '<div class="temp-toggle" role="group" aria-label="' + item.name + ' 온도 선택">' +
+          '<button type="button" data-temp="hot" class="' + (cur === "hot" ? "is-active" : "") + '">HOT</button>' +
+          '<button type="button" data-temp="ice" class="' + (cur === "ice" ? "is-active" : "") + '">ICE</button>' +
+          "</div>";
+      } else if (item.temp === "hot") {
+        tempMarkup = '<span class="temp-tag">HOT</span>';
+      } else if (item.temp === "ice") {
+        tempMarkup = '<span class="temp-tag">ICE</span>';
       } else {
-        var teethInput = document.getElementById('selTeeth');
-        var teeth = teethInput ? Math.round(parseFloat(teethInput.value)) : NaN;
-        if (isNaN(teeth)) teeth = m.teeth || 12;
-        teeth = Math.max(6, Math.min(60, teeth));
-        updated.teeth = teeth;
+        tempMarkup = "";
       }
-    } else if (el.type === 'cam') {
-      var camR = Math.max(0.5, parseFloat(document.getElementById('selR').value) || m.r);
-      var profileSel = document.getElementById('selProfile');
-      var profile = profileSel ? profileSel.value : (el.profile || 'eccentric');
-      updated = Object.assign({}, el, { x1: x, y1: y, x2: x + camR, y2: y, profile: profile });
-    } else if (el.type === 'shaft' || el.type === 'pin') {
-      var slen2 = Math.max(1, parseFloat(document.getElementById('selLen').value) || m.len);
-      var sang2 = parseFloat(document.getElementById('selAngle').value); if (isNaN(sang2)) sang2 = m.angle;
-      var srad2 = sang2 * Math.PI / 180;
-      var sthick = Math.max(2, parseFloat(document.getElementById('selThick').value) || m.thick);
-      updated = Object.assign({}, el, { x1: x, y1: y, x2: x + Math.cos(srad2) * slen2, y2: y + Math.sin(srad2) * slen2, thick: sthick });
-    } else if (el.type === 'crank') {
-      var klen2 = Math.max(1, parseFloat(document.getElementById('selLen').value) || m.len);
-      var kang2 = parseFloat(document.getElementById('selAngle').value); if (isNaN(kang2)) kang2 = m.angle;
-      var krad2 = kang2 * Math.PI / 180;
-      var koff = Math.max(2, parseFloat(document.getElementById('selOffset').value) || m.offset);
-      var kthick = Math.max(2, parseFloat(document.getElementById('selThick').value) || m.thick);
-      updated = Object.assign({}, el, { x1: x, y1: y, x2: x + Math.cos(krad2) * klen2, y2: y + Math.sin(krad2) * klen2, offset: koff, thick: kthick });
-    } else {
-      updated = el;
-    }
-    elements[selectedIndex] = updated;
-    redraw();
-    if (el.type === 'cam' || el.type === 'gear') buildSelectionPanel(); else updateSelectionValues();
-  }
 
-  function clearSelection(){
-    selectedIndices = [];
-    dragMode = null;
-    dragAnchor = null;
-    dragOriginals = null;
-    marqueeStart = null;
-    marqueeCurrent = null;
-    resizeHandle = null;
-    resizeIndex = null;
-    selectionPanel.hidden = true;
-  }
-
-  function deleteSelected(){
-    if (selectedIndices.length === 0) return;
-    var sorted = selectedIndices.slice().sort(function(a, b){ return b - a; });
-    sorted.forEach(function(idx){
-      var removed = elements.splice(idx, 1)[0];
-      if (removed && removed.points) totalPoints -= removed.points.length;
-    });
-    clearSelection();
-    redraw();
-  }
-
-  function copySelected(){
-    if (selectedIndices.length === 0) return;
-    clipboard = selectedIndices.map(function(i){ return cloneElement(elements[i]); });
-  }
-
-  function pasteClipboard(){
-    if (!clipboard || clipboard.length === 0) return;
-    if (elements.length + clipboard.length > MAX_ELEMENTS) return;
-    var offset = 24;
-    var newIndices = [];
-    clipboard.forEach(function(el){
-      var copy = translateElement(cloneElement(el), offset, offset);
-      if (copy.points) totalPoints += copy.points.length;
-      elements.push(copy);
-      newIndices.push(elements.length - 1);
-    });
-    clipboard = newIndices.map(function(i){ return cloneElement(elements[i]); });
-    selectedIndices = newIndices;
-    dragMode = null;
-    dragOriginals = null;
-    document.querySelectorAll('.tool-btn[data-tool]').forEach(function(b){ b.classList.remove('active'); });
-    var selectBtn = document.querySelector('.tool-btn[data-tool="select"]');
-    if (selectBtn) selectBtn.classList.add('active');
-    tool = 'select';
-    canvas.style.cursor = 'pointer';
-    buildSelectionPanel();
-    redraw();
-  }
-
-  selDeleteBtn.addEventListener('click', deleteSelected);
-  selDoneBtn.addEventListener('click', function(){ clearSelection(); redraw(); });
-
-  window.addEventListener('keydown', function(e){
-    var tag = document.activeElement && document.activeElement.tagName;
-    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-    if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIndices.length > 0) { e.preventDefault(); deleteSelected(); }
-    if (e.key === 'Escape' && selectedIndices.length > 0) { clearSelection(); redraw(); }
-    var mod = e.ctrlKey || e.metaKey;
-    if (mod && (e.key === 'c' || e.key === 'C') && selectedIndices.length > 0) { e.preventDefault(); copySelected(); }
-    if (mod && (e.key === 'v' || e.key === 'V') && clipboard && clipboard.length > 0) { e.preventDefault(); pasteClipboard(); }
-  });
-
-  function getPos(e){
-    var rect = canvas.getBoundingClientRect();
-    var scaleX = LW / rect.width;
-    var scaleY = LH / rect.height;
-    return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
-  }
-
-  function drawPaper(){
-    ctx.fillStyle = PAPER;
-    ctx.fillRect(0, 0, LW, LH);
-    var refLineScale = 100 / zoomPct; // keep reference lines a constant on-screen thickness at any zoom
-    ctx.lineWidth = 1 * refLineScale;
-    ctx.strokeStyle = GRID_MINOR;
-    var step = 20;
-    ctx.beginPath();
-    for (var x = 0; x <= LW; x += step) { ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, LH - STAMP_H); }
-    for (var y = 0; y <= LH - STAMP_H; y += step) { ctx.moveTo(0, y + 0.5); ctx.lineTo(LW, y + 0.5); }
-    ctx.stroke();
-    ctx.strokeStyle = GRID_MAJOR;
-    ctx.beginPath();
-    for (var x2 = 0; x2 <= LW; x2 += step * 5) { ctx.moveTo(x2 + 0.5, 0); ctx.lineTo(x2 + 0.5, LH - STAMP_H); }
-    for (var y2 = 0; y2 <= LH - STAMP_H; y2 += step * 5) { ctx.moveTo(0, y2 + 0.5); ctx.lineTo(LW, y2 + 0.5); }
-    ctx.stroke();
-
-    // drawing-sheet frame
-    ctx.strokeStyle = FRAME;
-    ctx.lineWidth = 1.4 * refLineScale;
-    ctx.strokeRect(6, 6, LW - 12, (LH - STAMP_H) - 12);
-
-    // title-block stamp strip
-    ctx.strokeStyle = FRAME;
-    ctx.lineWidth = 1.4 * refLineScale;
-    ctx.beginPath();
-    ctx.moveTo(0, LH - STAMP_H); ctx.lineTo(LW, LH - STAMP_H);
-    ctx.stroke();
-
-    var num = document.getElementById('numInput').value.trim();
-    var name = document.getElementById('nameInput').value.trim();
-    var label = (num ? ('No. ' + num) : 'No. —') + '    ' + (name || '이름 미입력');
-    ctx.fillStyle = '#20242b';
-    ctx.font = '600 24px "IBM Plex Mono", monospace';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(label, 20, LH - STAMP_H / 2);
-
-    var today = new Date();
-    var dateStr = today.getFullYear() + '.' + String(today.getMonth() + 1).padStart(2, '0') + '.' + String(today.getDate()).padStart(2, '0');
-    ctx.font = '400 16px "IBM Plex Mono", monospace';
-    ctx.fillStyle = '#5b6472';
-    ctx.textAlign = 'right';
-    ctx.fillText('오토마타 부품도 · ' + dateStr, LW - 20, LH - STAMP_H / 2);
-    ctx.textAlign = 'left';
-  }
-
-  function drawArrowHead(c, px, py, angle, size){
-    c.save();
-    c.translate(px, py);
-    c.rotate(angle);
-    c.beginPath();
-    c.moveTo(0, 0);
-    c.lineTo(-size, size * 0.42);
-    c.lineTo(-size, -size * 0.42);
-    c.closePath();
-    c.fill();
-    c.restore();
-  }
-
-  function drawDimensionLine(c, el, dashed){
-    var dx = el.x2 - el.x1, dy = el.y2 - el.y1;
-    var L = Math.hypot(dx, dy) || 1;
-    c.save();
-    c.strokeStyle = el.color;
-    c.fillStyle = el.color;
-    c.lineWidth = el.width;
-    c.lineCap = 'round';
-    c.setLineDash(dashed ? [7, 5] : []);
-    c.beginPath();
-    c.moveTo(el.x1, el.y1);
-    c.lineTo(el.x2, el.y2);
-    c.stroke();
-    c.setLineDash([]);
-
-    var arrowSize = 6 + el.width * 1.8;
-    drawArrowHead(c, el.x1, el.y1, Math.atan2(-dy, -dx), arrowSize);
-    drawArrowHead(c, el.x2, el.y2, Math.atan2(dy, dx), arrowSize);
-
-    var label = el.label != null ? String(el.label) : String(Math.round(L));
-    var midx = (el.x1 + el.x2) / 2, midy = (el.y1 + el.y2) / 2;
-    var angle = Math.atan2(dy, dx);
-    if (angle > Math.PI / 2 || angle < -Math.PI / 2) angle += Math.PI;
-    c.font = '600 20px "IBM Plex Mono", monospace';
-    var tw = c.measureText(label).width;
-    c.translate(midx, midy);
-    c.rotate(angle);
-    c.fillStyle = PAPER;
-    c.fillRect(-tw / 2 - 6, -13, tw + 12, 26);
-    c.fillStyle = el.color;
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.fillText(label, 0, 0);
-    c.restore();
-  }
-
-  function drawGear(c, el, dashed){
-    var outerR = Math.hypot(el.x2 - el.x1, el.y2 - el.y1) || 1;
-    var gtype = el.gearType || 'toothed';
-    c.save();
-    c.strokeStyle = el.color;
-    c.fillStyle = el.color;
-    c.lineWidth = el.width;
-    c.lineJoin = 'round';
-    c.setLineDash(dashed ? [7, 5] : []);
-
-    if (gtype === 'pegwheel') {
-      // plain circular plate with evenly spaced pegs near the rim
-      c.beginPath();
-      c.arc(el.x1, el.y1, outerR, 0, Math.PI * 2);
-      c.stroke();
-      var pegCount = Math.max(2, el.pegCount || 8);
-      var pegR = Math.max(2.2, outerR * 0.09);
-      var pegOrbit = outerR * 0.78;
-      for (var p = 0; p < pegCount; p++) {
-        var pang = (Math.PI * 2 / pegCount) * p - Math.PI / 2;
-        var px2 = el.x1 + Math.cos(pang) * pegOrbit;
-        var py2 = el.y1 + Math.sin(pang) * pegOrbit;
-        c.beginPath();
-        c.arc(px2, py2, pegR, 0, Math.PI * 2);
-        c.stroke();
-      }
-    } else {
-      var innerR = outerR * 0.72;
-      var teeth = Math.max(6, el.teeth || 12);
-      var angleStep = (Math.PI * 2) / teeth;
-      c.beginPath();
-      for (var i = 0; i < teeth; i++) {
-        var a0 = i * angleStep;
-        var pA = a0;
-        var pB = a0 + angleStep * 0.15;
-        var pC = a0 + angleStep * 0.35;
-        var pD = a0 + angleStep * 0.5;
-        var pts = [
-          { a: pA, r: innerR },
-          { a: pB, r: outerR },
-          { a: pC, r: outerR },
-          { a: pD, r: innerR }
-        ];
-        pts.forEach(function(pt){
-          var px = el.x1 + Math.cos(pt.a) * pt.r;
-          var py = el.y1 + Math.sin(pt.a) * pt.r;
-          if (i === 0 && pt === pts[0]) c.moveTo(px, py); else c.lineTo(px, py);
-        });
-      }
-      c.closePath();
-      c.stroke();
-    }
-
-    // center bore hole
-    var boreR = Math.max(4, outerR * 0.16);
-    c.beginPath();
-    c.arc(el.x1, el.y1, boreR, 0, Math.PI * 2);
-    c.stroke();
-
-    // centerline crosshair (dash-dot)
-    c.setLineDash([10, 3, 2, 3]);
-    c.lineWidth = Math.max(1, el.width * 0.6);
-    var cl = outerR + 10;
-    c.beginPath();
-    c.moveTo(el.x1 - cl, el.y1); c.lineTo(el.x1 + cl, el.y1);
-    c.moveTo(el.x1, el.y1 - cl); c.lineTo(el.x1, el.y1 + cl);
-    c.stroke();
-    c.restore();
-  }
-
-  function camRadius(profile, theta, Rmax){
-    var Rmin = Rmax * 0.42;
-    if (profile === 'snail') {
-      var t = theta / (Math.PI * 2);
-      return Rmin + (Rmax - Rmin) * t;
-    }
-    if (profile === 'heart') {
-      if (theta <= Math.PI) return Rmin + (Rmax - Rmin) * (theta / Math.PI);
-      return Rmax - (Rmax - Rmin) * ((theta - Math.PI) / Math.PI);
-    }
-    if (profile === 'pear') {
-      var pearMin = Rmax * 0.2;
-      return pearMin + (Rmax - pearMin) * Math.pow((1 + Math.cos(theta)) / 2, 1.4);
-    }
-    return Rmax; // eccentric: constant-radius circular outline
-  }
-
-  function drawCam(c, el, dashed){
-    var Rmax = Math.hypot(el.x2 - el.x1, el.y2 - el.y1) || 1;
-    var profile = el.profile || 'eccentric';
-    var N = 96;
-    c.save();
-    c.strokeStyle = el.color;
-    c.fillStyle = el.color;
-    c.lineWidth = el.width;
-    c.lineJoin = 'round';
-    c.setLineDash(dashed ? [7, 5] : []);
-    c.beginPath();
-    for (var i = 0; i <= N; i++) {
-      var theta = (i / N) * Math.PI * 2;
-      var r = camRadius(profile, theta, Rmax);
-      var ang = theta - Math.PI / 2;
-      var px = el.x1 + Math.cos(ang) * r;
-      var py = el.y1 + Math.sin(ang) * r;
-      if (i === 0) c.moveTo(px, py); else c.lineTo(px, py);
-    }
-    c.closePath();
-    c.stroke();
-
-    // pivot marker (offset from geometric center for the eccentric profile)
-    var pivotX = el.x1, pivotY = el.y1;
-    if (profile === 'eccentric') pivotX = el.x1 - Rmax * 0.32;
-    var boreR = Math.max(4, Rmax * 0.14);
-    c.beginPath();
-    c.arc(pivotX, pivotY, boreR, 0, Math.PI * 2);
-    c.stroke();
-
-    c.setLineDash([10, 3, 2, 3]);
-    c.lineWidth = Math.max(1, el.width * 0.6);
-    var crossLen = boreR + 16;
-    c.beginPath();
-    c.moveTo(pivotX - crossLen, pivotY); c.lineTo(pivotX + crossLen, pivotY);
-    c.moveTo(pivotX, pivotY - crossLen); c.lineTo(pivotX, pivotY + crossLen);
-    c.stroke();
-    c.restore();
-  }
-
-  // 두 점 (x1,y1)-(x2,y2)을 잇는 캡슐(알약) 몸통의 윤곽선만 그린다 (선 색/굵기/
-  // 점선 여부는 호출하는 쪽에서 이미 설정해 둔 상태를 그대로 사용). cornerRadius를
-  // 굵기의 절반만큼 크게 주면 완전히 둥근 모양이 되고, 작은 고정값을 주면 모서리만
-  // 살짝 둥근 모양이 된다. 축/핀뿐 아니라 크랭크축의 각 구간에도 재사용한다.
-  function strokeCapsuleBody(c, x1, y1, x2, y2, thick, cornerRadius){
-    var dx = x2 - x1, dy = y2 - y1;
-    var L = Math.hypot(dx, dy) || 1;
-    var angle = Math.atan2(dy, dx);
-    var half = thick / 2;
-    var r = Math.max(0.5, Math.min(cornerRadius, half, L / 2));
-    c.save();
-    c.translate(x1, y1);
-    c.rotate(angle);
-    c.beginPath();
-    c.moveTo(r, -half);
-    c.lineTo(L - r, -half);
-    c.arc(L - r, -half + r, r, -Math.PI / 2, 0);
-    c.lineTo(L, half - r);
-    c.arc(L - r, half - r, r, 0, Math.PI / 2);
-    c.lineTo(r, half);
-    c.arc(r, half - r, r, Math.PI / 2, Math.PI);
-    c.lineTo(0, -half + r);
-    c.arc(r, -half + r, r, Math.PI, Math.PI * 1.5);
-    c.closePath();
-    c.stroke();
-    c.restore();
-  }
-
-  // 두 점을 잇는 캡슐 몸통 + 가운데를 지나는 파선-점 중심선 (축/핀용).
-  function drawCapsule(c, el, dashed, cornerRadius){
-    var thick = el.thick != null ? el.thick : 16;
-    var half = thick / 2;
-    var dx = el.x2 - el.x1, dy = el.y2 - el.y1;
-    var L = Math.hypot(dx, dy) || 1;
-    var angle = Math.atan2(dy, dx);
-    c.save();
-    c.strokeStyle = el.color;
-    c.lineWidth = el.width;
-    c.lineJoin = 'round';
-    c.setLineDash(dashed ? [7, 5] : []);
-    strokeCapsuleBody(c, el.x1, el.y1, el.x2, el.y2, thick, cornerRadius);
-    // centerline (dash-dot), matching gear/cam's centerline convention
-    c.translate(el.x1, el.y1);
-    c.rotate(angle);
-    c.setLineDash([10, 3, 2, 3]);
-    c.lineWidth = Math.max(1, el.width * 0.6);
-    var ext = half * 1.2;
-    c.beginPath();
-    c.moveTo(-ext, 0);
-    c.lineTo(L + ext, 0);
-    c.stroke();
-    c.restore();
-  }
-
-  function drawShaft(c, el, dashed){
-    drawCapsule(c, el, dashed, 9999); // clamps to half-thickness => full round ends
-  }
-
-  function drawPin(c, el, dashed){
-    drawCapsule(c, el, dashed, 3); // small fixed corner radius => barely-rounded ends
-  }
-
-  // 크랭크축(F안): 축 → 직각으로 옆으로(오프셋) → 짧게 같은 방향으로(크랭크 핀
-  // 구간) → 다시 직각으로 반대쪽 옆으로 → 처음과 같은 축 선상으로 복귀.
-  // x1,y1→x2,y2 로 전체 길이·방향을 잡고, offset으로 꺾이는 폭을 조절한다.
-  function crankPoints(el){
-    var dx = el.x2 - el.x1, dy = el.y2 - el.y1;
-    var L = Math.hypot(dx, dy) || 1;
-    var ux = dx / L, uy = dy / L;
-    var px = -uy, py = ux;
-    var off = el.offset != null ? el.offset : 18;
-    var seg1 = L * 0.38, pin = L * 0.24, seg3 = L - seg1 - pin;
-    var p0 = { x: el.x1, y: el.y1 };
-    var p1 = { x: p0.x + ux * seg1, y: p0.y + uy * seg1 };
-    var p2 = { x: p1.x + px * off, y: p1.y + py * off };
-    var p3 = { x: p2.x + ux * pin, y: p2.y + uy * pin };
-    var p4 = { x: p3.x - px * off, y: p3.y - py * off };
-    var p5 = { x: p4.x + ux * seg3, y: p4.y + uy * seg3 };
-    return [p0, p1, p2, p3, p4, p5];
-  }
-
-  // 크랭크축도 축/핀처럼 "속이 있는 둥근 막대"로 보이도록, 꺾인 구간마다 캡슐
-  // 몸통을 이어 그리고 그 위에 전체를 관통하는 중심선 하나를 얹는다 — 얇은 선
-  // 하나로만 그리면 납작해 보인다는 피드백을 반영해 입체감을 맞췄다.
-  function drawCrank(c, el, dashed){
-    var pts = crankPoints(el);
-    var thick = el.thick != null ? el.thick : 14;
-    c.save();
-    c.strokeStyle = el.color;
-    c.lineWidth = el.width;
-    c.lineJoin = 'round';
-    c.setLineDash(dashed ? [7, 5] : []);
-    for (var i = 0; i < pts.length - 1; i++) {
-      strokeCapsuleBody(c, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, thick, 9999);
-    }
-    c.setLineDash([10, 3, 2, 3]);
-    c.lineWidth = Math.max(1, el.width * 0.6);
-    c.beginPath();
-    pts.forEach(function(p, i){ i === 0 ? c.moveTo(p.x, p.y) : c.lineTo(p.x, p.y); });
-    c.stroke();
-    c.restore();
-  }
-
-  function strokeElement(c, el, dashed){
-    if (el.type === 'eraser') {
-      // Punch a true transparent hole in the ink layer only — never touches
-      // the background/grid, which lives solely on the main canvas.
-      c.save();
-      c.globalCompositeOperation = 'destination-out';
-      c.strokeStyle = 'rgba(0,0,0,1)';
-      c.lineWidth = el.width;
-      c.lineCap = 'round';
-      c.lineJoin = 'round';
-      c.setLineDash(dashed ? [7, 5] : []);
-      c.beginPath();
-      el.points.forEach(function(p, i){ i === 0 ? c.moveTo(p.x, p.y) : c.lineTo(p.x, p.y); });
-      c.stroke();
-      c.setLineDash([]);
-      c.restore();
-      return;
-    }
-    c.strokeStyle = el.color;
-    c.lineWidth = el.width;
-    c.lineCap = 'round';
-    c.lineJoin = 'round';
-    c.setLineDash(dashed ? [7, 5] : []);
-    if (el.type === 'freehand') {
-      c.beginPath();
-      el.points.forEach(function(p, i){ i === 0 ? c.moveTo(p.x, p.y) : c.lineTo(p.x, p.y); });
-      c.stroke();
-    } else if (el.type === 'line') {
-      c.beginPath(); c.moveTo(el.x1, el.y1); c.lineTo(el.x2, el.y2); c.stroke();
-    } else if (el.type === 'dim') {
-      drawDimensionLine(c, el, dashed);
-    } else if (el.type === 'rect') {
-      var x = Math.min(el.x1, el.x2), y = Math.min(el.y1, el.y2);
-      var w = Math.abs(el.x2 - el.x1), h = Math.abs(el.y2 - el.y1);
-      c.strokeRect(x, y, w, h);
-    } else if (el.type === 'circle') {
-      var r = Math.hypot(el.x2 - el.x1, el.y2 - el.y1);
-      c.beginPath(); c.arc(el.x1, el.y1, r, 0, Math.PI * 2); c.stroke();
-    } else if (el.type === 'gear') {
-      drawGear(c, el, dashed);
-    } else if (el.type === 'cam') {
-      drawCam(c, el, dashed);
-    } else if (el.type === 'shaft') {
-      drawShaft(c, el, dashed);
-    } else if (el.type === 'pin') {
-      drawPin(c, el, dashed);
-    } else if (el.type === 'crank') {
-      drawCrank(c, el, dashed);
-    }
-    c.setLineDash([]);
-  }
-
-  function redraw(previewEl, previewDashed){
-    // 1) Rebuild the ink layer offscreen: real elements plus (optionally) the
-    //    in-progress preview stroke, with eraser strokes punching real holes.
-    inkCtx.clearRect(0, 0, LW, LH);
-    elements.forEach(function(el){ strokeElement(inkCtx, el, false); });
-    if (previewEl) strokeElement(inkCtx, previewEl, !!previewDashed);
-
-    // 2) Paint the background/grid fresh on the main canvas — untouched by erasing.
-    drawPaper();
-
-    // 3) Flatten the ink layer on top. Reset to identity first since the ink
-    //    canvas's pixel buffer is already at device-pixel resolution.
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(inkCanvas, 0, 0);
-    ctx.setTransform(canvasScale, 0, 0, canvasScale, 0, 0);
-
-    // 4) Overlays (selection box, handles, marquee) — not part of the ink layer.
-    selectedIndices.forEach(function(idx){
-      if (!elements[idx]) return;
-      var b = getBounds(elements[idx]);
-      ctx.save();
-      ctx.strokeStyle = '#2c5f8a';
-      ctx.lineWidth = 1.4;
-      ctx.setLineDash([6, 4]);
-      ctx.strokeRect(b.minX - 8, b.minY - 8, (b.maxX - b.minX) + 16, (b.maxY - b.minY) + 16);
-      ctx.restore();
-    });
-    if (selectedIndices.length === 1 && elements[selectedIndices[0]]) {
-      drawHandles(elements[selectedIndices[0]]);
-    }
-    if (dragMode === 'marquee' && marqueeStart && marqueeCurrent) {
-      var mx = Math.min(marqueeStart.x, marqueeCurrent.x), my = Math.min(marqueeStart.y, marqueeCurrent.y);
-      var mw = Math.abs(marqueeCurrent.x - marqueeStart.x), mh = Math.abs(marqueeCurrent.y - marqueeStart.y);
-      ctx.save();
-      ctx.fillStyle = 'rgba(44,95,138,0.12)';
-      ctx.fillRect(mx, my, mw, mh);
-      ctx.strokeStyle = '#2c5f8a';
-      ctx.lineWidth = 1.2;
-      ctx.setLineDash([5, 4]);
-      ctx.strokeRect(mx, my, mw, mh);
-      ctx.restore();
-    }
-    updateButtons();
-  }
-
-  function updateButtons(){
-    document.getElementById('undoBtn').disabled = elements.length === 0;
-    document.getElementById('clearBtn').disabled = elements.length === 0;
-    if (elements.length === 0 && typeof disarmClear === 'function') disarmClear();
-  }
-
-  canvas.addEventListener('pointerdown', function(e){
-    var p0 = getPos(e);
-    if (tool === 'select') {
-      if (selectedIndices.length === 1) {
-        var handleId = hitTestHandle(p0, elements[selectedIndices[0]]);
-        if (handleId) {
-          canvas.setPointerCapture(e.pointerId);
-          drawing = true;
-          dragMode = 'resize';
-          resizeHandle = handleId;
-          resizeIndex = selectedIndices[0];
-          dragOriginals = [cloneElement(elements[resizeIndex])];
-          dragAnchor = p0;
-          return;
-        }
-      }
-      var idx = hitTest(p0);
-      canvas.setPointerCapture(e.pointerId);
-      drawing = true;
-      if (idx === -1) {
-        dragMode = 'marquee';
-        marqueeStart = p0;
-        marqueeCurrent = p0;
-        selectedIndices = [];
-        selectionPanel.hidden = true;
-        redraw();
-        return;
-      }
-      if (selectedIndices.indexOf(idx) === -1) selectedIndices = [idx];
-      dragMode = 'move';
-      dragAnchor = p0;
-      dragOriginals = selectedIndices.map(function(i){ return cloneElement(elements[i]); });
-      buildSelectionPanel();
-      redraw();
-      return;
-    }
-    canvas.setPointerCapture(e.pointerId);
-    drawing = true;
-    startPt = p0;
-    if (isFreehandTool(tool)) freehandPoints = [startPt];
-  });
-
-  canvas.addEventListener('pointermove', function(e){
-    if (!drawing) return;
-    var p = getPos(e);
-    if (tool === 'select') {
-      if (dragMode === 'marquee') {
-        marqueeCurrent = p;
-        redraw();
-        return;
-      }
-      if (dragMode === 'resize' && dragOriginals) {
-        elements[resizeIndex] = computeResize(dragOriginals[0], resizeHandle, p);
-        redraw();
-        updateSelectionValues();
-        return;
-      }
-      if (dragMode === 'move' && dragOriginals) {
-        var dx = p.x - dragAnchor.x, dy = p.y - dragAnchor.y;
-        selectedIndices.forEach(function(i, k){ elements[i] = translateElement(dragOriginals[k], dx, dy); });
-        redraw();
-        updateSelectionValues();
-      }
-      return;
-    }
-    if (isFreehandTool(tool)) {
-      var last = freehandPoints[freehandPoints.length - 1];
-      if (Math.hypot(p.x - last.x, p.y - last.y) >= 1.2 && totalPoints < MAX_TOTAL_POINTS) {
-        freehandPoints.push(p);
-        totalPoints++;
-      }
-      redraw(makeFreehandElement(tool, freehandPoints), false);
-    } else {
-      var end = constrainEnd(tool, startPt, p);
-      var previewEl = { type: tool, x1: startPt.x, y1: startPt.y, x2: end.x, y2: end.y, color: color, width: strokeWidth };
-      if (tool === 'dim') previewEl.label = String(Math.round(Math.hypot(end.x - startPt.x, end.y - startPt.y)));
-      if (tool === 'gear') { previewEl.gearType = gearType; if (gearType === 'pegwheel') previewEl.pegCount = 8; else previewEl.teeth = 12; }
-      if (tool === 'cam') previewEl.profile = camProfile;
-      if (tool === 'shaft') previewEl.thick = 16;
-      if (tool === 'pin') previewEl.thick = 8;
-      if (tool === 'crank') { previewEl.offset = 18; previewEl.thick = 14; }
-      redraw(previewEl, true);
-    }
-  });
-
-  canvas.addEventListener('pointermove', function(e){
-    if (drawing || tool !== 'select' || selectedIndices.length !== 1) return;
-    var p = getPos(e);
-    var h = hitTestHandle(p, elements[selectedIndices[0]]);
-    canvas.style.cursor = h ? cursorForHandle(h) : 'pointer';
-  });
-
-  function finishStroke(e){
-    if (!drawing) return;
-    drawing = false;
-    var p = getPos(e);
-    if (tool === 'select') {
-      if (dragMode === 'marquee' && marqueeStart) {
-        var mBounds = { minX: Math.min(marqueeStart.x, p.x), minY: Math.min(marqueeStart.y, p.y), maxX: Math.max(marqueeStart.x, p.x), maxY: Math.max(marqueeStart.y, p.y) };
-        var found = [];
-        elements.forEach(function(el, i){ if (rectsIntersect(getBounds(el), mBounds)) found.push(i); });
-        selectedIndices = found;
-        dragMode = null;
-        marqueeStart = null;
-        marqueeCurrent = null;
-        if (found.length > 0) buildSelectionPanel(); else selectionPanel.hidden = true;
-        redraw();
-        return;
-      }
-      dragMode = null;
-      dragOriginals = null;
-      resizeHandle = null;
-      resizeIndex = null;
-      return;
-    }
-    if (elements.length >= MAX_ELEMENTS) { redraw(); return; }
-    if (isFreehandTool(tool)) {
-      if (freehandPoints && freehandPoints.length > 1) elements.push(makeFreehandElement(tool, freehandPoints));
-      freehandPoints = null;
-    } else {
-      var end = constrainEnd(tool, startPt, p);
-      var dist = Math.hypot(end.x - startPt.x, end.y - startPt.y);
-      if (dist >= 1) {
-        var newEl = { type: tool, x1: startPt.x, y1: startPt.y, x2: end.x, y2: end.y, color: color, width: strokeWidth };
-        if (tool === 'dim') newEl.label = String(Math.round(dist));
-        if (tool === 'gear') { newEl.gearType = gearType; if (gearType === 'pegwheel') newEl.pegCount = 8; else newEl.teeth = 12; }
-        if (tool === 'cam') newEl.profile = camProfile;
-        if (tool === 'shaft') newEl.thick = 16;
-        if (tool === 'pin') newEl.thick = 8;
-        if (tool === 'crank') { newEl.offset = 18; newEl.thick = 14; }
-        elements.push(newEl);
-      }
-    }
-    redraw();
-  }
-  canvas.addEventListener('pointerup', finishStroke);
-  canvas.addEventListener('pointercancel', finishStroke);
-  canvas.addEventListener('pointerleave', function(e){ if (drawing) finishStroke(e); });
-
-  canvas.addEventListener('dblclick', function(e){
-    var p = getPos(e);
-    var idx = hitTest(p);
-    if (idx === -1 || elements[idx].type !== 'dim') return;
-    if (tool !== 'select') {
-      document.querySelectorAll('.tool-btn[data-tool]').forEach(function(b){ b.classList.remove('active'); });
-      var selectBtn = document.querySelector('.tool-btn[data-tool="select"]');
-      if (selectBtn) selectBtn.classList.add('active');
-      tool = 'select';
-      canvas.style.cursor = 'pointer';
-      camProfileRow.hidden = true;
-      gearTypeRow.hidden = true;
-    }
-    selectedIndices = [idx];
-    dragMode = null;
-    dragOriginals = null;
-    buildSelectionPanel();
-    redraw();
-    var labelInput = document.getElementById('selLabel');
-    if (labelInput) { labelInput.focus(); labelInput.select(); }
-  });
-
-  var camProfileRow = document.getElementById('camProfileRow');
-  var gearTypeRow = document.getElementById('gearTypeRow');
-  document.querySelectorAll('.tool-btn[data-tool]').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      document.querySelectorAll('.tool-btn[data-tool]').forEach(function(b){ b.classList.remove('active'); });
-      btn.classList.add('active');
-      tool = btn.dataset.tool;
-      if (tool !== 'select') { clearSelection(); redraw(); }
-      canvas.style.cursor = tool === 'select' ? 'pointer' : (tool === 'eraser' ? 'cell' : 'crosshair');
-      camProfileRow.hidden = (tool !== 'cam');
-      gearTypeRow.hidden = (tool !== 'gear');
-    });
-  });
-  document.querySelectorAll('.cam-profile-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      document.querySelectorAll('.cam-profile-btn').forEach(function(b){ b.classList.remove('active'); });
-      btn.classList.add('active');
-      camProfile = btn.dataset.profile;
-    });
-  });
-  document.querySelectorAll('.gear-type-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      document.querySelectorAll('.gear-type-btn').forEach(function(b){ b.classList.remove('active'); });
-      btn.classList.add('active');
-      gearType = btn.dataset.geartype;
-    });
-  });
-  document.querySelectorAll('.swatch').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      document.querySelectorAll('.swatch').forEach(function(b){ b.classList.remove('active'); });
-      btn.classList.add('active');
-      color = btn.dataset.color;
-    });
-  });
-  document.querySelectorAll('.thick-btn:not(.zoom-btn)').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      document.querySelectorAll('.thick-btn:not(.zoom-btn)').forEach(function(b){ b.classList.remove('active'); });
-      btn.classList.add('active');
-      strokeWidth = parseFloat(btn.dataset.width);
-    });
-  });
-
-  function applyZoom(pct){
-    zoomPct = pct;
-    resizeCanvasBacking();
-    if (zoomPct <= 100) {
-      canvas.style.width = '100%';
-    } else {
-      var baseWidth = canvasWrap.clientWidth;
-      canvas.style.width = Math.round(baseWidth * zoomPct / 100) + 'px';
-    }
-    canvas.style.height = 'auto';
-    redraw();
-  }
-  document.querySelectorAll('.zoom-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      document.querySelectorAll('.zoom-btn').forEach(function(b){ b.classList.remove('active'); });
-      btn.classList.add('active');
-      applyZoom(parseInt(btn.dataset.zoom, 10));
-    });
-  });
-
-  document.getElementById('undoBtn').addEventListener('click', function(){
-    var removed = elements.pop();
-    if (removed && removed.points) totalPoints -= removed.points.length;
-    clearSelection();
-    redraw();
-  });
-  var clearBtn = document.getElementById('clearBtn');
-  var clearBtnDefaultText = clearBtn.textContent;
-  var clearArmed = false;
-  var clearArmTimer = null;
-  function disarmClear(){
-    clearArmed = false;
-    clearBtn.textContent = clearBtnDefaultText;
-    clearBtn.classList.remove('danger');
-    if (clearArmTimer) { clearTimeout(clearArmTimer); clearArmTimer = null; }
-  }
-  clearBtn.addEventListener('click', function(){
-    if (elements.length === 0) return;
-    if (!clearArmed) {
-      clearArmed = true;
-      clearBtn.textContent = '정말 지울까요? (다시 클릭)';
-      clearBtn.classList.add('danger');
-      clearArmTimer = setTimeout(disarmClear, 4000);
-      return;
-    }
-    disarmClear();
-    elements = [];
-    totalPoints = 0;
-    clearSelection();
-    redraw();
-  });
-
-  var numInput = document.getElementById('numInput');
-  var nameInput = document.getElementById('nameInput');
-  var filenamePreview = document.getElementById('filenamePreview');
-
-  function sanitize(s){ return s.replace(/[\\\/:*?"<>|]/g, '').trim(); }
-
-  function computeFilename(){
-    var num = sanitize(numInput.value);
-    var name = sanitize(nameInput.value);
-    if (!num || !name) return null;
-    return num + '_' + name + '_부품도.png';
-  }
-
-  function refreshInfo(){
-    var fn = computeFilename();
-    filenamePreview.innerHTML = fn ? ('저장 파일명: <strong>' + fn + '</strong>') : '번호와 이름을 입력하면 저장 파일명이 표시됩니다.';
-    redraw();
-  }
-  numInput.addEventListener('input', refreshInfo);
-  nameInput.addEventListener('input', refreshInfo);
-
-  // This page runs in two very different places:
-  //  1) Opened directly as a plain HTML file (e.g. from Google Classroom, a
-  //     school webpage, or double-clicked from a folder) — the normal way
-  //     students should use it. No Claude account, no login, ever.
-  //  2) Previewed inside a claude.ai Artifact tab (mainly for the teacher).
-  //     There, `window.claude` exists and file saving can go through the
-  //     Claude "downloads" capability — but that path requires the viewer
-  //     to be signed in to claude.ai, which is exactly what students should
-  //     never be asked for. So it is only ever used as a bonus when present;
-  //     the primary, always-available save path is a plain browser download
-  //     that needs no login and no window.claude at all.
-  var hasClaudeHost = !!(window.claude && window.claude.use);
-  var downloadsPromise = hasClaudeHost ? window.claude.use('downloads') : Promise.resolve(null);
-
-  function browserDownload(filename, data, mimeType){
-    var blob = (data instanceof Blob) ? data : new Blob([data], { type: mimeType });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
-  }
-
-  var saveStatus = document.getElementById('saveStatus');
-  var saveBtn = document.getElementById('saveBtn');
-
-  function showStatus(text, kind){
-    saveStatus.textContent = text;
-    saveStatus.className = 'save-status' + (kind ? (' ' + kind) : '');
-    if (kind) setTimeout(function(){ if (saveStatus.textContent === text) { saveStatus.textContent = ''; saveStatus.className = 'save-status'; } }, 4000);
-  }
-
-  saveBtn.addEventListener('click', function(){
-    var filename = computeFilename();
-    if (!filename) {
-      numInput.classList.add('field-error'); nameInput.classList.add('field-error');
-      showStatus('번호와 이름을 먼저 입력해 주세요.', 'err');
-      (numInput.value.trim() ? nameInput : numInput).focus();
-      return;
-    }
-    numInput.classList.remove('field-error'); nameInput.classList.remove('field-error');
-    saveBtn.disabled = true;
-    showStatus('저장 중…', '');
-    canvas.toBlob(function(blob){
-      if (!hasClaudeHost) {
-        // Plain file page: normal browser download, no login involved.
-        browserDownload(filename, blob, 'image/png');
-        showStatus('✓ 저장되었습니다. (다운로드 폴더 확인)', 'ok');
-        saveBtn.disabled = false;
-        return;
-      }
-      downloadsPromise.then(function(downloads){
-        if (!downloads) { showStatus('지금은 저장 기능을 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.', 'err'); saveBtn.disabled = false; return; }
-        downloads.save({ filename: filename, data: blob }).then(function(){
-          showStatus('✓ 저장되었습니다.', 'ok');
-          saveBtn.disabled = false;
-        }).catch(function(err){
-          if (err && err.code === 'declined') { showStatus('', ''); }
-          else { showStatus('저장하지 못했습니다: ' + (err && err.message ? err.message : '알 수 없는 오류'), 'err'); }
-          saveBtn.disabled = false;
-        });
-      });
-    }, 'image/png');
-  });
-
-  // ---- 선생님께 제출하기 ----
-  // 학생 계정/로그인이 전혀 없는 환경이므로, 제출은 선생님이 미리 배포해 둔
-  // Apps Script "제출 접수" 웹앱으로 그림(PNG)과 번호/이름을 전송하는 방식으로
-  // 동작한다. SUBMIT_URL이 비어 있으면(선생님이 아직 설정 전) 버튼 자체를 숨긴다.
-  var submitRow = document.getElementById('submitRow');
-  var submitBtn = document.getElementById('submitBtn');
-  var submitStatus = document.getElementById('submitStatus');
-
-  function showSubmitStatus(text, kind){
-    submitStatus.textContent = text;
-    submitStatus.className = 'save-status' + (kind ? (' ' + kind) : '');
-    if (kind === 'ok') setTimeout(function(){ if (submitStatus.textContent === text) { submitStatus.textContent = ''; submitStatus.className = 'save-status'; } }, 6000);
-  }
-
-  function blobToBase64(blob){
-    return new Promise(function(resolve, reject){
-      var reader = new FileReader();
-      reader.onload = function(){
-        var dataUrl = String(reader.result);
-        var comma = dataUrl.indexOf(',');
-        resolve(comma === -1 ? dataUrl : dataUrl.slice(comma + 1));
+      var opts = {
+        temp: state.cardTemp[item.id],
+        size: state.cardSize[item.id],
+        shot: state.cardShot[item.id],
+        decaf: state.cardDecaf[item.id]
       };
-      reader.onerror = function(){ reject(reader.error); };
-      reader.readAsDataURL(blob);
-    });
-  }
+      var unit = unitPriceFor(item, opts);
+      var breakdown = priceBreakdown(item, opts);
+      var priceLabel = won(unit) + (breakdown.length ? '<span style="font-size:.72rem;color:var(--ink-faint)"> (' + breakdown.join(" · ") + ")</span>" : "");
 
-  if (SUBMIT_URL) {
-    submitRow.hidden = false;
-    submitBtn.addEventListener('click', function(){
-      var num = numInput.value.trim();
-      var name = nameInput.value.trim();
-      if (!num || !name) {
-        numInput.classList.add('field-error'); nameInput.classList.add('field-error');
-        showSubmitStatus('번호와 이름을 먼저 입력해 주세요.', 'err');
-        (num ? nameInput : numInput).focus();
-        return;
+      var showOptions = hasSizeOption(item) || isCoffee(item);
+      var isOpen = state.cardOptionsOpen[item.id];
+      var optionsMarkup = "";
+      if (showOptions) {
+        var rows = "";
+        if (hasSizeOption(item)) {
+          rows +=
+            '<div class="option-row"><span class="option-row__label">사이즈</span>' +
+            '<div class="temp-toggle" role="group" aria-label="' + item.name + ' 사이즈 선택">' +
+              '<button type="button" data-size="R" class="' + (opts.size === "R" ? "is-active" : "") + '">보통</button>' +
+              '<button type="button" data-size="L" class="' + (opts.size === "L" ? "is-active" : "") + '">큰 사이즈 (+' + SIZE_UPCHARGE.toLocaleString("ko-KR") + "원)</button>" +
+            "</div></div>";
+        }
+        if (isCoffee(item)) {
+          rows +=
+            '<div class="option-row"><span class="option-row__label">샷 추가 (+' + SHOT_PRICE.toLocaleString("ko-KR") + "원/샷)</span>" +
+            '<div class="stepper" aria-label="' + item.name + ' 샷 추가">' +
+              '<button type="button" data-act="shot-dec" aria-label="샷 줄이기">−</button>' +
+              '<span class="stepper__count num">' + opts.shot + "</span>" +
+              '<button type="button" data-act="shot-inc" aria-label="샷 늘리기">+</button>' +
+            "</div></div>" +
+            '<label class="decaf-chip"><input type="checkbox" data-act="decaf"' + (opts.decaf ? " checked" : "") + "> 디카페인으로 변경</label>";
+        }
+        optionsMarkup =
+          '<button type="button" class="options-toggle" data-act="toggle-options">' + (isOpen ? "옵션 숨기기 ▴" : "세부 옵션 ▾") + "</button>" +
+          (isOpen ? '<div class="options-panel">' + rows + "</div>" : "");
       }
-      if (elements.length === 0) { showSubmitStatus('제출할 그림이 아직 없습니다.', 'err'); return; }
-      numInput.classList.remove('field-error'); nameInput.classList.remove('field-error');
-      submitBtn.disabled = true;
-      showSubmitStatus('제출 중…', '');
-      canvas.toBlob(function(blob){
-        blobToBase64(blob).then(function(base64){
-          return fetch(SUBMIT_URL, {
-            method: 'POST',
-            // text/plain avoids a CORS preflight that Apps Script web apps
-            // cannot answer; the server still JSON.parses the body itself.
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({
-              num: num,
-              name: name,
-              submittedAt: new Date().toISOString(),
-              imageBase64: base64
-            })
-          });
-        }).then(function(res){ return res.json(); }).then(function(result){
-          if (result && result.ok) {
-            showSubmitStatus('✓ 제출되었습니다. 선생님 화면에서 확인할 수 있어요.', 'ok');
-          } else {
-            showSubmitStatus('제출하지 못했습니다: ' + (result && result.message ? result.message : '알 수 없는 오류'), 'err');
-          }
-          submitBtn.disabled = false;
-        }).catch(function(err){
-          showSubmitStatus('제출하지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.', 'err');
-          submitBtn.disabled = false;
-        });
-      }, 'image/png');
+
+      card.innerHTML =
+        '<div class="card__top">' +
+          '<div class="card__icon" style="background:' + tint.bg + ";color:" + tint.fg + '"><svg><use href="#' + item.icon + '"/></svg></div>' +
+          tempMarkup +
+        "</div>" +
+        '<div class="card__name">' + item.name + "</div>" +
+        '<div class="card__price num">' + priceLabel + "</div>" +
+        optionsMarkup +
+        '<div class="card__bottom">' +
+          '<div class="stepper" aria-label="' + item.name + ' 수량">' +
+            '<button type="button" data-act="dec" aria-label="수량 줄이기">−</button>' +
+            '<span class="stepper__count num">' + state.cardQty[item.id] + "</span>" +
+            '<button type="button" data-act="inc" aria-label="수량 늘리기">+</button>' +
+          "</div>" +
+          '<button type="button" class="add-btn">담기</button>' +
+        "</div>";
+
+      card.dataset.id = item.id;
+      menuGrid.appendChild(card);
     });
   }
 
-  var saveProgressBtn = document.getElementById('saveProgressBtn');
-  var loadProgressBtn = document.getElementById('loadProgressBtn');
-  var loadProgressInput = document.getElementById('loadProgressInput');
-  var progressStatus = document.getElementById('progressStatus');
+  menuGrid.addEventListener("click", function (e) {
+    var card = e.target.closest(".card");
+    if (!card) return;
+    var id = card.dataset.id;
+    var item = MENU.filter(function (m) { return m.id === id; })[0];
 
-  function showProgressStatus(text, kind){
-    progressStatus.textContent = text;
-    progressStatus.className = 'save-status' + (kind ? (' ' + kind) : '');
-    if (kind) setTimeout(function(){ if (progressStatus.textContent === text) { progressStatus.textContent = ''; progressStatus.className = 'save-status'; } }, 5000);
-  }
-
-  function computeProgressFilename(){
-    var num = sanitize(numInput.value);
-    var name = sanitize(nameInput.value);
-    var base = (num && name) ? (num + '_' + name) : '오토마타';
-    return base + '_작업저장.json';
-  }
-
-  saveProgressBtn.addEventListener('click', function(){
-    if (elements.length === 0) { showProgressStatus('저장할 그림이 아직 없습니다.', 'err'); return; }
-    var payload = {
-      appVersion: 1,
-      savedAt: new Date().toISOString(),
-      num: numInput.value,
-      name: nameInput.value,
-      elements: elements
-    };
-    var filename = computeProgressFilename();
-    saveProgressBtn.disabled = true;
-    showProgressStatus('저장 중…', '');
-    if (!hasClaudeHost) {
-      browserDownload(filename, JSON.stringify(payload), 'application/json');
-      showProgressStatus('✓ 작업을 저장했습니다. (다운로드 폴더 확인) 다음에 이 파일을 불러오면 이어서 그릴 수 있어요.', 'ok');
-      saveProgressBtn.disabled = false;
+    if (e.target.closest("[data-temp]")) {
+      state.cardTemp[id] = e.target.closest("[data-temp]").dataset.temp;
+      renderMenu();
       return;
     }
-    downloadsPromise.then(function(downloads){
-      if (!downloads) { showProgressStatus('지금은 저장 기능을 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.', 'err'); saveProgressBtn.disabled = false; return; }
-      downloads.save({ filename: filename, data: JSON.stringify(payload) }).then(function(){
-        showProgressStatus('✓ 작업을 저장했습니다. 다음에 이 파일을 불러오면 이어서 그릴 수 있어요.', 'ok');
-        saveProgressBtn.disabled = false;
-      }).catch(function(err){
-        if (err && err.code === 'declined') { showProgressStatus('', ''); }
-        else { showProgressStatus('저장하지 못했습니다: ' + (err && err.message ? err.message : '알 수 없는 오류'), 'err'); }
-        saveProgressBtn.disabled = false;
+    if (e.target.closest("[data-size]")) {
+      state.cardSize[id] = e.target.closest("[data-size]").dataset.size;
+      renderMenu();
+      return;
+    }
+    if (e.target.closest("[data-act='toggle-options']")) {
+      state.cardOptionsOpen[id] = !state.cardOptionsOpen[id];
+      renderMenu();
+      return;
+    }
+    if (e.target.closest("[data-act='shot-inc']")) {
+      state.cardShot[id] = Math.min(MAX_SHOTS, state.cardShot[id] + 1);
+      renderMenu();
+      return;
+    }
+    if (e.target.closest("[data-act='shot-dec']")) {
+      state.cardShot[id] = Math.max(0, state.cardShot[id] - 1);
+      renderMenu();
+      return;
+    }
+    if (e.target.closest("[data-act='inc']")) {
+      state.cardQty[id] = Math.min(9, state.cardQty[id] + 1);
+      renderMenu();
+      return;
+    }
+    if (e.target.closest("[data-act='dec']")) {
+      state.cardQty[id] = Math.max(1, state.cardQty[id] - 1);
+      renderMenu();
+      return;
+    }
+    if (e.target.closest(".add-btn")) {
+      var opts = {
+        temp: state.cardTemp[id],
+        size: state.cardSize[id],
+        shot: state.cardShot[id],
+        decaf: state.cardDecaf[id]
+      };
+      addToCart(item, opts, state.cardQty[id]);
+
+      var btn = e.target.closest(".add-btn");
+      var original = btn.textContent;
+      btn.textContent = "담았어요 ✓";
+      btn.classList.add("is-added");
+      setTimeout(function () {
+        btn.textContent = original;
+        btn.classList.remove("is-added");
+      }, 800);
+
+      // reset this card's quantity in place, without rebuilding the grid,
+      // so the "담았어요 ✓" feedback above stays visible
+      state.cardQty[id] = 1;
+      var countEl = card.querySelector(".card__bottom .stepper__count");
+      if (countEl) countEl.textContent = "1";
+
+      bumpCartBadge();
+    }
+  });
+
+  menuGrid.addEventListener("change", function (e) {
+    if (!e.target.matches("[data-act='decaf']")) return;
+    var card = e.target.closest(".card");
+    if (!card) return;
+    state.cardDecaf[card.dataset.id] = e.target.checked;
+    renderMenu();
+  });
+
+  // ---------- cart ----------
+
+  function addToCart(item, opts, qty) {
+    var unitPrice = unitPriceFor(item, opts);
+    var key = item.id + ":" + (opts.temp || "none") + ":" + (opts.size || "R") + ":" + (opts.shot || 0) + ":" + (opts.decaf ? "decaf" : "reg");
+    var existing = state.cart.filter(function (l) { return l.key === key; })[0];
+    if (existing) {
+      existing.qty += qty;
+    } else {
+      state.cart.push({
+        key: key,
+        id: item.id,
+        name: item.name,
+        temp: opts.temp,
+        size: opts.size,
+        shot: opts.shot,
+        decaf: opts.decaf,
+        unitPrice: unitPrice,
+        qty: qty
       });
+    }
+    renderCart();
+  }
+
+  var cartList = document.getElementById("cart-list");
+  var cartEmpty = document.getElementById("cart-empty");
+  var cartTotalEl = document.getElementById("cart-total");
+  var cartItemCountEl = document.getElementById("cart-item-count");
+  var payBtn = document.getElementById("pay-btn");
+  var barCount = document.getElementById("bar-count");
+  var barTotal = document.getElementById("bar-total");
+  var cartPanel = document.getElementById("cart");
+  var cartToggle = document.getElementById("cart-toggle");
+
+  function cartTotal() {
+    return state.cart.reduce(function (sum, l) { return sum + l.unitPrice * l.qty; }, 0);
+  }
+
+  function cartCount() {
+    return state.cart.reduce(function (sum, l) { return sum + l.qty; }, 0);
+  }
+
+  function tempLabel(temp) {
+    if (temp === "hot") return "HOT";
+    if (temp === "ice") return "ICE";
+    return "";
+  }
+
+  function renderCart() {
+    cartList.querySelectorAll(".line").forEach(function (n) { n.remove(); });
+    cartEmpty.style.display = state.cart.length ? "none" : "flex";
+    cartEmpty.style.flexDirection = "column";
+    cartEmpty.style.alignItems = "center";
+
+    state.cart.forEach(function (line) {
+      var el = document.createElement("div");
+      el.className = "line";
+      el.dataset.key = line.key;
+      var metaText = lineOptions(line);
+      el.innerHTML =
+        '<div class="line__top">' +
+          '<div>' +
+            '<div class="line__name">' + line.name + "</div>" +
+            (metaText ? '<div class="line__meta">' + metaText + "</div>" : "") +
+          "</div>" +
+          '<button type="button" class="line__remove" aria-label="' + line.name + " 삭제\">×</button>" +
+        "</div>" +
+        '<div class="line__bottom">' +
+          '<div class="stepper" aria-label="' + line.name + ' 수량">' +
+            '<button type="button" data-act="dec">−</button>' +
+            '<span class="stepper__count num">' + line.qty + "</span>" +
+            '<button type="button" data-act="inc">+</button>' +
+          "</div>" +
+          '<div class="line__price num">' + won(line.unitPrice * line.qty) + "</div>" +
+        "</div>";
+      cartList.appendChild(el);
+    });
+
+    var total = cartTotal();
+    var count = cartCount();
+    cartTotalEl.textContent = won(total);
+    cartItemCountEl.textContent = count + "개";
+    barCount.textContent = count;
+    barTotal.textContent = won(total);
+    payBtn.disabled = state.cart.length === 0;
+  }
+
+  cartList.addEventListener("click", function (e) {
+    var line = e.target.closest(".line");
+    if (!line) return;
+    var key = line.dataset.key;
+    var entry = state.cart.filter(function (l) { return l.key === key; })[0];
+    if (!entry) return;
+
+    if (e.target.closest(".line__remove")) {
+      state.cart = state.cart.filter(function (l) { return l.key !== key; });
+    } else if (e.target.closest("[data-act='inc']")) {
+      entry.qty = Math.min(9, entry.qty + 1);
+    } else if (e.target.closest("[data-act='dec']")) {
+      entry.qty -= 1;
+      if (entry.qty <= 0) {
+        state.cart = state.cart.filter(function (l) { return l.key !== key; });
+      }
+    }
+    renderCart();
+  });
+
+  function bumpCartBadge() {
+    barCount.style.transform = "scale(1.3)";
+    setTimeout(function () { barCount.style.transform = "scale(1)"; }, 180);
+  }
+  barCount.style.transition = "transform 0.18s";
+
+  cartToggle.addEventListener("click", function () {
+    cartPanel.classList.toggle("is-open");
+  });
+
+  // ---------- order type ----------
+
+  document.querySelectorAll(".order-type button").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll(".order-type button").forEach(function (b) { b.classList.remove("is-active"); });
+      btn.classList.add("is-active");
+      state.orderType = btn.dataset.order;
     });
   });
 
-  loadProgressBtn.addEventListener('click', function(){
-    loadProgressInput.value = '';
-    loadProgressInput.click();
+  // ---------- receipt choice ----------
+
+  document.querySelectorAll("[data-receipt]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll("[data-receipt]").forEach(function (b) { b.classList.remove("is-active"); });
+      btn.classList.add("is-active");
+      state.receiptChoice = btn.dataset.receipt;
+    });
   });
 
-  loadProgressInput.addEventListener('change', function(){
-    var file = loadProgressInput.files && loadProgressInput.files[0];
-    if (!file) return;
-    var reader = new FileReader();
-    reader.onload = function(){
-      var parsed;
-      try { parsed = JSON.parse(String(reader.result)); }
-      catch (err) { showProgressStatus('파일을 읽을 수 없습니다. 저장된 작업 파일(.json)을 선택해 주세요.', 'err'); return; }
-      if (!parsed || !Array.isArray(parsed.elements)) { showProgressStatus('올바른 작업 파일이 아닙니다.', 'err'); return; }
-      elements = parsed.elements.map(function(el){
-        return (el && el.points) ? Object.assign({}, el, { points: el.points.map(function(p){ return { x: p.x, y: p.y }; }) }) : Object.assign({}, el);
+  // ---------- call staff ----------
+
+  var helpBtn = document.getElementById("help-btn");
+  var helpToast = document.getElementById("help-toast");
+  var helpTimer = null;
+
+  helpBtn.addEventListener("click", function () {
+    helpToast.hidden = false;
+    requestAnimationFrame(function () { helpToast.classList.add("is-visible"); });
+    clearTimeout(helpTimer);
+    helpTimer = setTimeout(function () {
+      helpToast.classList.remove("is-visible");
+      setTimeout(function () { helpToast.hidden = true; }, 250);
+    }, 3000);
+  });
+
+  // ---------- checkout ----------
+
+  var modalVeil = document.getElementById("modal-veil");
+  var modalBody = document.getElementById("modal-body");
+  var checkoutOrderNumber = null;
+  var checkoutTimer = null;
+
+  function clearCheckoutTimer() {
+    if (checkoutTimer) {
+      clearTimeout(checkoutTimer);
+      checkoutTimer = null;
+    }
+  }
+
+  function openCheckout() {
+    if (!state.cart.length) return;
+    checkoutOrderNumber = String(Math.floor(Math.random() * 900) + 100);
+    modalVeil.classList.add("is-open");
+    showMethodStep();
+  }
+
+  function closeCheckout() {
+    clearCheckoutTimer();
+    modalVeil.classList.remove("is-open");
+  }
+
+  function modalTopbar() {
+    return '<div class="modal-topbar">' +
+      '<button type="button" class="modal-icon-btn" id="modal-back" aria-label="이전 단계">' +
+        '<svg><use href="#icon-arrow-left"/></svg>' +
+      '</button>' +
+      '<button type="button" class="modal-icon-btn" id="modal-close" aria-label="닫기">' +
+        '<svg><use href="#icon-x"/></svg>' +
+      '</button>' +
+    '</div>';
+  }
+
+  function bindTopbar(onBack) {
+    document.getElementById("modal-close").addEventListener("click", closeCheckout);
+    document.getElementById("modal-back").addEventListener("click", onBack || closeCheckout);
+  }
+
+  function payMethodBtn(method, icon, name, hint) {
+    return '<button type="button" class="pay-method-btn" data-method="' + method + '">' +
+      '<span class="pay-method-btn__icon"><svg><use href="#' + icon + '"/></svg></span>' +
+      '<span class="pay-method-btn__text"><span class="name">' + name + '</span><span class="hint">' + hint + '</span></span>' +
+    '</button>';
+  }
+
+  function showMethodStep() {
+    clearCheckoutTimer();
+    var total = cartTotal();
+
+    modalBody.className = "modal modal--method";
+    modalBody.innerHTML =
+      modalTopbar() +
+      '<div class="modal-title display">결제 수단을 선택해주세요</div>' +
+      '<div class="modal-total">결제 금액 <b class="num">' + won(total) + "</b></div>" +
+      '<div class="pay-methods">' +
+        payMethodBtn("card", "icon-card", "카드", "신용·체크카드로 결제") +
+        payMethodBtn("cash", "icon-cash", "현금", "지폐를 넣어서 결제") +
+        payMethodBtn("qr", "icon-qr", "간편결제", "QR코드를 휴대폰으로 스캔") +
+      "</div>";
+
+    bindTopbar(closeCheckout);
+    modalBody.querySelectorAll("[data-method]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var method = btn.dataset.method;
+        if (method === "card") showCardStep();
+        else if (method === "cash") showCashStep();
+        else if (method === "qr") showQrStep();
       });
-      totalPoints = 0;
-      elements.forEach(function(el){ if (el.points) totalPoints += el.points.length; });
-      if (parsed.num != null) numInput.value = parsed.num;
-      if (parsed.name != null) nameInput.value = parsed.name;
-      clearSelection();
-      refreshInfo();
-      redraw();
-      showProgressStatus('✓ 이전 작업을 불러왔습니다 (도형 ' + elements.length + '개).', 'ok');
-    };
-    reader.onerror = function(){ showProgressStatus('파일을 읽는 중 문제가 발생했습니다.', 'err'); };
-    reader.readAsText(file);
-  });
+    });
+  }
 
-  redraw();
+  function showCardStep() {
+    clearCheckoutTimer();
+    modalBody.className = "modal modal--processing";
+    modalBody.innerHTML = modalTopbar() + '<div class="spinner"></div><p class="processing-label">카드를 인식하고 있어요…</p>';
+    bindTopbar(showMethodStep);
+    checkoutTimer = setTimeout(function () { finishPayment("카드", {}); }, 1100);
+  }
+
+  function showCashStep() {
+    clearCheckoutTimer();
+    var total = cartTotal();
+    var inserted = 0;
+
+    function renderCash() {
+      var remaining = Math.max(0, total - inserted);
+      var change = Math.max(0, inserted - total);
+      var met = inserted >= total;
+
+      modalBody.className = "modal modal--cash";
+      modalBody.innerHTML =
+        modalTopbar() +
+        '<div class="modal-title display">현금 결제</div>' +
+        '<div class="cash-total">' +
+          '<div class="cash-total-row"><span>결제 금액</span><b class="num">' + won(total) + "</b></div>" +
+          '<div class="cash-total-row"><span>투입 금액</span><b class="num">' + won(inserted) + "</b></div>" +
+          '<div class="cash-total-row remaining' + (met ? " is-met" : "") + '"><span>' + (met ? "거스름돈" : "남은 금액") + '</span><b class="num">' + won(met ? change : remaining) + "</b></div>" +
+        "</div>" +
+        '<div class="bill-grid">' +
+          [1000, 5000, 10000, 50000].map(function (v) {
+            return '<button type="button" class="bill-btn" data-bill="' + v + '"><svg><use href="#icon-cash"/></svg><span class="num">' + v.toLocaleString("ko-KR") + '원</span><small>넣기</small></button>';
+          }).join("") +
+        "</div>" +
+        '<div class="cash-actions">' +
+          '<button type="button" class="ghost-btn" id="cash-reset">다시 넣기</button>' +
+          '<button type="button" class="pay-btn" id="cash-confirm" style="flex:1"' + (met ? "" : " disabled") + '><svg><use href="#icon-check"/></svg>결제 완료</button>' +
+        "</div>";
+
+      bindTopbar(showMethodStep);
+      modalBody.querySelectorAll("[data-bill]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          inserted += parseInt(btn.dataset.bill, 10);
+          renderCash();
+        });
+      });
+      document.getElementById("cash-reset").addEventListener("click", function () {
+        inserted = 0;
+        renderCash();
+      });
+      if (met) {
+        document.getElementById("cash-confirm").addEventListener("click", function () {
+          finishPayment("현금", { received: inserted, change: change });
+        });
+      }
+    }
+
+    renderCash();
+  }
+
+  function showQrStep() {
+    clearCheckoutTimer();
+    var total = cartTotal();
+    var payUrl = BASE_URL + "?pay=1&total=" + total + "&order=" + checkoutOrderNumber;
+
+    modalBody.className = "modal modal--qr";
+    modalBody.innerHTML =
+      modalTopbar() +
+      '<div class="modal-title display">간편결제 (QR)</div>' +
+      '<div class="modal-total">결제 금액 <b class="num">' + won(total) + "</b></div>" +
+      '<div class="qr-frame" id="qr-frame"></div>' +
+      '<div class="qr-status"><span class="dot-spin"></span>휴대폰으로 QR코드를 비춰 결제해보세요</div>' +
+      '<button type="button" class="pay-btn" id="qr-confirm" style="width:100%"><svg><use href="#icon-check"/></svg>결제 완료 확인</button>';
+
+    bindTopbar(showMethodStep);
+
+    var qrFrame = document.getElementById("qr-frame");
+    try {
+      if (typeof QRCode !== "undefined") {
+        new QRCode(qrFrame, {
+          text: payUrl,
+          width: 168,
+          height: 168,
+          colorDark: "#2b2420",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      } else {
+        qrFrame.textContent = "QR코드를 불러올 수 없어요";
+      }
+    } catch (err) {
+      qrFrame.textContent = "QR코드를 불러올 수 없어요";
+    }
+
+    document.getElementById("qr-confirm").addEventListener("click", function () {
+      finishPayment("간편결제(QR)", {});
+    });
+
+    // Kiosks don't wait forever on a simple-pay tap — auto-continue after
+    // a few seconds, same as tapping the confirm button.
+    checkoutTimer = setTimeout(function () { finishPayment("간편결제(QR)", {}); }, 6000);
+  }
+
+  function finishPayment(methodLabel, extra) {
+    clearCheckoutTimer();
+    var receiptLines = state.cart.map(function (l) {
+      return { name: l.name, temp: l.temp, size: l.size, shot: l.shot, decaf: l.decaf, qty: l.qty, sum: l.unitPrice * l.qty };
+    });
+    var total = cartTotal();
+    var orderTypeLabel = state.orderType === "dine" ? "매장" : "포장";
+    var wantsReceipt = state.receiptChoice !== "no";
+
+    modalBody.className = "modal modal--success";
+
+    var receiptBlock;
+    if (wantsReceipt) {
+      var rows = receiptLines.map(function (l) {
+        var opts = lineOptions(l);
+        return '<div class="receipt__row"><span>' + l.name + (opts ? " (" + opts + ")" : "") + " ×" + l.qty + '</span><span class="num">' + won(l.sum) + "</span></div>";
+      }).join("");
+
+      var extraRows = "";
+      if (extra && typeof extra.received === "number") {
+        extraRows =
+          '<div class="receipt__row"><span>받은 금액</span><span class="num">' + won(extra.received) + "</span></div>" +
+          '<div class="receipt__row"><span>거스름돈</span><span class="num">' + won(extra.change) + "</span></div>";
+      }
+
+      receiptBlock = '<div class="receipt">' + rows + extraRows + '<div class="receipt__row total"><span>총 결제금액</span><span class="num">' + won(total) + "</span></div></div>";
+    } else {
+      receiptBlock =
+        '<div class="modal-total" style="margin-bottom:14px">결제 총액 <b class="num">' + won(total) + "</b></div>" +
+        '<div class="receipt" style="text-align:center;color:var(--ink-soft)">영수증을 받지 않도록 선택하셨어요.</div>';
+    }
+
+    modalBody.innerHTML =
+      '<div class="check"><svg><use href="#icon-check"/></svg></div>' +
+      '<div class="display">결제가 완료되었습니다</div>' +
+      '<div class="order-number display num">' + checkoutOrderNumber + "</div>" +
+      '<div class="order-number-label">주문번호 · ' + orderTypeLabel + " · " + methodLabel + "</div>" +
+      receiptBlock +
+      '<button type="button" class="new-order-btn" id="new-order-btn">확인</button>';
+
+    document.getElementById("new-order-btn").addEventListener("click", showPreparingStep);
+  }
+
+  function showPreparingStep() {
+    clearCheckoutTimer();
+    modalBody.className = "modal modal--processing";
+    modalBody.innerHTML = '<div class="spinner"></div><p class="processing-label">음료·메뉴를 준비하고 있어요…</p>';
+    checkoutTimer = setTimeout(showReadyStep, 3200);
+  }
+
+  function showReadyStep() {
+    clearCheckoutTimer();
+    modalBody.className = "modal modal--success";
+    modalBody.innerHTML =
+      '<div class="check"><svg><use href="#icon-check"/></svg></div>' +
+      '<div class="display">준비가 완료됐어요!</div>' +
+      '<div class="order-number display num">' + checkoutOrderNumber + "</div>" +
+      '<div class="order-number-label">픽업대에서 주문번호를 확인해주세요</div>' +
+      '<button type="button" class="new-order-btn" id="new-order-btn">새 주문 시작하기</button>';
+
+    document.getElementById("new-order-btn").addEventListener("click", function () {
+      state.cart = [];
+      renderCart();
+      cartPanel.classList.remove("is-open");
+      modalVeil.classList.remove("is-open");
+    });
+  }
+
+  payBtn.addEventListener("click", openCheckout);
+
+  // ---------- init ----------
+
+  renderMenu();
+  renderCart();
 })();
 </script>
-
-</body>
-</html>
