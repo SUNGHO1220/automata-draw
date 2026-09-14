@@ -1,8 +1,3 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>오토마타 부품도 그리기</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
@@ -136,8 +131,7 @@
   .save-status.ok{ color:var(--ok); }
   .save-status.err{ color:var(--accent); }
 </style>
-</head>
-<body>
+
 <div class="page">
 <div class="sheet"><div class="sheet-inner">
 
@@ -272,7 +266,7 @@
   // 비워두면(기본값) "선생님께 제출하기" 버튼이 화면에 나타나지 않습니다.
   // 예: var SUBMIT_URL = 'https://script.google.com/macros/s/AKfycb.../exec';
   // ============================================================
-  var SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbwODn5FbB4OH7XQ5nD31kC1sipXuA3zn5UTxI1RRC8VUQFlA88LJc2W82LnUVTmC5wN/exec';
+  var SUBMIT_URL = '';
 
   var canvas = document.getElementById('board');
   var ctx = canvas.getContext('2d');
@@ -848,7 +842,7 @@
     ctx.font = '400 16px "IBM Plex Mono", monospace';
     ctx.fillStyle = '#5b6472';
     ctx.textAlign = 'right';
-    ctx.fillText('오토마타 부품도 · ' + dateStr, LW - 20, LH - STAMP_H / 2);
+    ctx.fillText('오토마타 부품도 · ' + dateStr + ' · 소다율T', LW - 20, LH - STAMP_H / 2);
     ctx.textAlign = 'left';
   }
 
@@ -1183,7 +1177,7 @@
     c.setLineDash([]);
   }
 
-  function redraw(previewEl, previewDashed){
+  function redraw(previewEl, previewDashed, noOverlay){
     // 1) Rebuild the ink layer offscreen: real elements plus (optionally) the
     //    in-progress preview stroke, with eraser strokes punching real holes.
     inkCtx.clearRect(0, 0, LW, LH);
@@ -1200,32 +1194,46 @@
     ctx.setTransform(canvasScale, 0, 0, canvasScale, 0, 0);
 
     // 4) Overlays (selection box, handles, marquee) — not part of the ink layer.
-    selectedIndices.forEach(function(idx){
-      if (!elements[idx]) return;
-      var b = getBounds(elements[idx]);
-      ctx.save();
-      ctx.strokeStyle = '#2c5f8a';
-      ctx.lineWidth = 1.4;
-      ctx.setLineDash([6, 4]);
-      ctx.strokeRect(b.minX - 8, b.minY - 8, (b.maxX - b.minX) + 16, (b.maxY - b.minY) + 16);
-      ctx.restore();
-    });
-    if (selectedIndices.length === 1 && elements[selectedIndices[0]]) {
-      drawHandles(elements[selectedIndices[0]]);
-    }
-    if (dragMode === 'marquee' && marqueeStart && marqueeCurrent) {
-      var mx = Math.min(marqueeStart.x, marqueeCurrent.x), my = Math.min(marqueeStart.y, marqueeCurrent.y);
-      var mw = Math.abs(marqueeCurrent.x - marqueeStart.x), mh = Math.abs(marqueeCurrent.y - marqueeStart.y);
-      ctx.save();
-      ctx.fillStyle = 'rgba(44,95,138,0.12)';
-      ctx.fillRect(mx, my, mw, mh);
-      ctx.strokeStyle = '#2c5f8a';
-      ctx.lineWidth = 1.2;
-      ctx.setLineDash([5, 4]);
-      ctx.strokeRect(mx, my, mw, mh);
-      ctx.restore();
+    //    noOverlay=true skips this entirely; used right before exporting a PNG
+    //    so the blue selection box/handles never get baked into a saved file.
+    if (!noOverlay) {
+      selectedIndices.forEach(function(idx){
+        if (!elements[idx]) return;
+        var b = getBounds(elements[idx]);
+        ctx.save();
+        ctx.strokeStyle = '#2c5f8a';
+        ctx.lineWidth = 1.4;
+        ctx.setLineDash([6, 4]);
+        ctx.strokeRect(b.minX - 8, b.minY - 8, (b.maxX - b.minX) + 16, (b.maxY - b.minY) + 16);
+        ctx.restore();
+      });
+      if (selectedIndices.length === 1 && elements[selectedIndices[0]]) {
+        drawHandles(elements[selectedIndices[0]]);
+      }
+      if (dragMode === 'marquee' && marqueeStart && marqueeCurrent) {
+        var mx = Math.min(marqueeStart.x, marqueeCurrent.x), my = Math.min(marqueeStart.y, marqueeCurrent.y);
+        var mw = Math.abs(marqueeCurrent.x - marqueeStart.x), mh = Math.abs(marqueeCurrent.y - marqueeStart.y);
+        ctx.save();
+        ctx.fillStyle = 'rgba(44,95,138,0.12)';
+        ctx.fillRect(mx, my, mw, mh);
+        ctx.strokeStyle = '#2c5f8a';
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([5, 4]);
+        ctx.strokeRect(mx, my, mw, mh);
+        ctx.restore();
+      }
     }
     updateButtons();
+  }
+
+  // 저장/제출 등 "내보내기" 직전에 잠깐 선택 표시(파란 점선 박스·손잡이)를 지운
+  // 화면으로 다시 그려서, 캔버스를 캡처하는 콜백(fn) 안에서는 깨끗한 도면만
+  // 담기게 한다. 캡처가 끝나면 원래 선택 표시를 되살린다.
+  function withCleanCanvas(fn){
+    var hadOverlay = selectedIndices.length > 0 || dragMode === 'marquee';
+    if (hadOverlay) redraw(null, false, true);
+    fn();
+    if (hadOverlay) redraw();
   }
 
   function updateButtons(){
@@ -1556,26 +1564,28 @@
     numInput.classList.remove('field-error'); nameInput.classList.remove('field-error');
     saveBtn.disabled = true;
     showStatus('저장 중…', '');
-    canvas.toBlob(function(blob){
-      if (!hasClaudeHost) {
-        // Plain file page: normal browser download, no login involved.
-        browserDownload(filename, blob, 'image/png');
-        showStatus('✓ 저장되었습니다. (다운로드 폴더 확인)', 'ok');
-        saveBtn.disabled = false;
-        return;
-      }
-      downloadsPromise.then(function(downloads){
-        if (!downloads) { showStatus('지금은 저장 기능을 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.', 'err'); saveBtn.disabled = false; return; }
-        downloads.save({ filename: filename, data: blob }).then(function(){
-          showStatus('✓ 저장되었습니다.', 'ok');
+    withCleanCanvas(function(){
+      canvas.toBlob(function(blob){
+        if (!hasClaudeHost) {
+          // Plain file page: normal browser download, no login involved.
+          browserDownload(filename, blob, 'image/png');
+          showStatus('✓ 저장되었습니다. (다운로드 폴더 확인)', 'ok');
           saveBtn.disabled = false;
-        }).catch(function(err){
-          if (err && err.code === 'declined') { showStatus('', ''); }
-          else { showStatus('저장하지 못했습니다: ' + (err && err.message ? err.message : '알 수 없는 오류'), 'err'); }
-          saveBtn.disabled = false;
+          return;
+        }
+        downloadsPromise.then(function(downloads){
+          if (!downloads) { showStatus('지금은 저장 기능을 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.', 'err'); saveBtn.disabled = false; return; }
+          downloads.save({ filename: filename, data: blob }).then(function(){
+            showStatus('✓ 저장되었습니다.', 'ok');
+            saveBtn.disabled = false;
+          }).catch(function(err){
+            if (err && err.code === 'declined') { showStatus('', ''); }
+            else { showStatus('저장하지 못했습니다: ' + (err && err.message ? err.message : '알 수 없는 오류'), 'err'); }
+            saveBtn.disabled = false;
+          });
         });
-      });
-    }, 'image/png');
+      }, 'image/png');
+    });
   });
 
   // ---- 선생님께 제출하기 ----
@@ -1620,32 +1630,34 @@
       numInput.classList.remove('field-error'); nameInput.classList.remove('field-error');
       submitBtn.disabled = true;
       showSubmitStatus('제출 중…', '');
-      canvas.toBlob(function(blob){
-        blobToBase64(blob).then(function(base64){
-          return fetch(SUBMIT_URL, {
-            method: 'POST',
-            // text/plain avoids a CORS preflight that Apps Script web apps
-            // cannot answer; the server still JSON.parses the body itself.
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({
-              num: num,
-              name: name,
-              submittedAt: new Date().toISOString(),
-              imageBase64: base64
-            })
+      withCleanCanvas(function(){
+        canvas.toBlob(function(blob){
+          blobToBase64(blob).then(function(base64){
+            return fetch(SUBMIT_URL, {
+              method: 'POST',
+              // text/plain avoids a CORS preflight that Apps Script web apps
+              // cannot answer; the server still JSON.parses the body itself.
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({
+                num: num,
+                name: name,
+                submittedAt: new Date().toISOString(),
+                imageBase64: base64
+              })
+            });
+          }).then(function(res){ return res.json(); }).then(function(result){
+            if (result && result.ok) {
+              showSubmitStatus('✓ 제출되었습니다. 선생님 화면에서 확인할 수 있어요.', 'ok');
+            } else {
+              showSubmitStatus('제출하지 못했습니다: ' + (result && result.message ? result.message : '알 수 없는 오류'), 'err');
+            }
+            submitBtn.disabled = false;
+          }).catch(function(err){
+            showSubmitStatus('제출하지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.', 'err');
+            submitBtn.disabled = false;
           });
-        }).then(function(res){ return res.json(); }).then(function(result){
-          if (result && result.ok) {
-            showSubmitStatus('✓ 제출되었습니다. 선생님 화면에서 확인할 수 있어요.', 'ok');
-          } else {
-            showSubmitStatus('제출하지 못했습니다: ' + (result && result.message ? result.message : '알 수 없는 오류'), 'err');
-          }
-          submitBtn.disabled = false;
-        }).catch(function(err){
-          showSubmitStatus('제출하지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.', 'err');
-          submitBtn.disabled = false;
-        });
-      }, 'image/png');
+        }, 'image/png');
+      });
     });
   }
 
@@ -1731,6 +1743,3 @@
   redraw();
 })();
 </script>
-
-</body>
-</html>
