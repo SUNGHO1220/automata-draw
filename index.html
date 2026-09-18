@@ -257,7 +257,8 @@
     <div class="save-row progress-row">
       <button class="ghost-btn" id="saveProgressBtn" type="button">작업 저장 (이어하기용 파일)</button>
       <button class="ghost-btn" id="loadProgressBtn" type="button">저장한 작업 불러오기</button>
-      <input type="file" id="loadProgressInput" accept="application/json,.json" hidden>
+      <input type="file" id="loadProgressInput" accept="application/json,.json,image/png,.png" hidden>
+      <span class="filename-preview">위에서 저장한 PNG 그림 파일이나 .json 작업 파일 모두 불러올 수 있어요.</span>
     </div>
     <div class="save-status" id="progressStatus"></div>
   </section>
@@ -1551,6 +1552,113 @@
     setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
   }
 
+  // ---- PNG에 작업 데이터 함께 저장하기 ----
+  // "그림 저장 (PNG 다운로드)" 버튼이 만드는 PNG 파일 안에, 화면에 보이지 않는
+  // 표준 PNG 텍스트 청크(iTXt)로 도형 데이터(JSON)를 함께 넣어 둔다. 이렇게 하면
+  // 학생이 내려받은 PNG 파일 하나가 "완성된 그림"이면서 동시에 "이어서 작업할 수
+  // 있는 저장 파일" 역할을 모두 하게 되어, 별도의 .json 파일을 신경 쓰지 않아도 된다.
+  var PNG_DATA_KEYWORD = 'automata-data';
+
+  var CRC_TABLE = (function(){
+    var table = new Uint32Array(256);
+    for (var n = 0; n < 256; n++) {
+      var c = n;
+      for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      table[n] = c >>> 0;
+    }
+    return table;
+  })();
+
+  function crc32(bytes){
+    var c = 0xFFFFFFFF;
+    for (var i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+
+  function u32ToBytes(n){
+    return [ (n >>> 24) & 0xFF, (n >>> 16) & 0xFF, (n >>> 8) & 0xFF, n & 0xFF ];
+  }
+
+  function bytesToU32(bytes, offset){
+    return ((bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3]) >>> 0;
+  }
+
+  function concatBytes(arrays){
+    var total = 0;
+    for (var i = 0; i < arrays.length; i++) total += arrays[i].length;
+    var out = new Uint8Array(total);
+    var pos = 0;
+    for (var j = 0; j < arrays.length; j++) { out.set(arrays[j], pos); pos += arrays[j].length; }
+    return out;
+  }
+
+  function buildPngChunk(typeStr, dataBytes){
+    var typeBytes = new Uint8Array(typeStr.length);
+    for (var i = 0; i < typeStr.length; i++) typeBytes[i] = typeStr.charCodeAt(i);
+    var lengthBytes = new Uint8Array(u32ToBytes(dataBytes.length));
+    var crcBytes = new Uint8Array(u32ToBytes(crc32(concatBytes([typeBytes, dataBytes]))));
+    return concatBytes([lengthBytes, typeBytes, dataBytes, crcBytes]);
+  }
+
+  function buildITextChunk(keyword, text){
+    var enc = new TextEncoder();
+    var data = concatBytes([
+      enc.encode(keyword),
+      new Uint8Array([0]), // 키워드 종료(null)
+      new Uint8Array([0]), // 압축 플래그: 0 = 비압축
+      new Uint8Array([0]), // 압축 방식
+      new Uint8Array([0]), // 언어 태그(없음) 종료(null)
+      new Uint8Array([0]), // 번역된 키워드(없음) 종료(null)
+      enc.encode(text)
+    ]);
+    return buildPngChunk('iTXt', data);
+  }
+
+  // pngBytes(Uint8Array, 전체 PNG 파일)의 IEND 청크 바로 앞에 데이터 청크를 끼워 넣는다.
+  function embedJsonInPng(pngBytes, jsonString){
+    var pos = 8; // 8바이트 PNG 서명 이후부터 청크 시작
+    var iendStart = -1;
+    while (pos + 8 <= pngBytes.length) {
+      var len = bytesToU32(pngBytes, pos);
+      var type = String.fromCharCode(pngBytes[pos + 4], pngBytes[pos + 5], pngBytes[pos + 6], pngBytes[pos + 7]);
+      if (type === 'IEND') { iendStart = pos; break; }
+      pos += 8 + len + 4; // length(4) + type(4) + data + crc(4)
+    }
+    if (iendStart === -1) return pngBytes; // 예상과 다른 형식이면 원본 그대로 반환
+    var newChunk = buildITextChunk(PNG_DATA_KEYWORD, jsonString);
+    return concatBytes([pngBytes.subarray(0, iendStart), newChunk, pngBytes.subarray(iendStart)]);
+  }
+
+  // pngBytes 안에서 automata-data 키워드의 iTXt 청크를 찾아 JSON 문자열을 꺼낸다. 없으면 null.
+  function extractJsonFromPng(pngBytes){
+    if (pngBytes.length < 8 || pngBytes[0] !== 0x89 || pngBytes[1] !== 0x50) return null;
+    var pos = 8;
+    while (pos + 8 <= pngBytes.length) {
+      var len = bytesToU32(pngBytes, pos);
+      var type = String.fromCharCode(pngBytes[pos + 4], pngBytes[pos + 5], pngBytes[pos + 6], pngBytes[pos + 7]);
+      var dataStart = pos + 8;
+      if (type === 'IEND') break;
+      if (type === 'iTXt') {
+        var data = pngBytes.subarray(dataStart, dataStart + len);
+        var nul1 = data.indexOf(0);
+        if (nul1 !== -1) {
+          var keyword = String.fromCharCode.apply(null, data.subarray(0, nul1));
+          if (keyword === PNG_DATA_KEYWORD) {
+            var compressionFlag = data[nul1 + 1];
+            var nul2 = data.indexOf(0, nul1 + 3);
+            var nul3 = (nul2 !== -1) ? data.indexOf(0, nul2 + 1) : -1;
+            if (!compressionFlag && nul2 !== -1 && nul3 !== -1) {
+              try { return new TextDecoder('utf-8').decode(data.subarray(nul3 + 1)); }
+              catch (e) { return null; }
+            }
+          }
+        }
+      }
+      pos = dataStart + len + 4;
+    }
+    return null;
+  }
+
   var saveStatus = document.getElementById('saveStatus');
   var saveBtn = document.getElementById('saveBtn');
 
@@ -1571,25 +1679,43 @@
     numInput.classList.remove('field-error'); nameInput.classList.remove('field-error');
     saveBtn.disabled = true;
     showStatus('저장 중…', '');
+
+    function finishSave(outBlob){
+      if (!hasClaudeHost) {
+        // Plain file page: normal browser download, no login involved.
+        browserDownload(filename, outBlob, 'image/png');
+        showStatus('✓ 저장되었습니다. (다운로드 폴더 확인) 이 PNG 파일을 나중에 "저장한 작업 불러오기"로 불러오면 이어서 그릴 수 있어요.', 'ok');
+        saveBtn.disabled = false;
+        return;
+      }
+      downloadsPromise.then(function(downloads){
+        if (!downloads) { showStatus('지금은 저장 기능을 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.', 'err'); saveBtn.disabled = false; return; }
+        downloads.save({ filename: filename, data: outBlob }).then(function(){
+          showStatus('✓ 저장되었습니다. 이 PNG 파일을 나중에 "저장한 작업 불러오기"로 불러오면 이어서 그릴 수 있어요.', 'ok');
+          saveBtn.disabled = false;
+        }).catch(function(err){
+          if (err && err.code === 'declined') { showStatus('', ''); }
+          else { showStatus('저장하지 못했습니다: ' + (err && err.message ? err.message : '알 수 없는 오류'), 'err'); }
+          saveBtn.disabled = false;
+        });
+      });
+    }
+
     withCleanCanvas(function(){
       canvas.toBlob(function(blob){
-        if (!hasClaudeHost) {
-          // Plain file page: normal browser download, no login involved.
-          browserDownload(filename, blob, 'image/png');
-          showStatus('✓ 저장되었습니다. (다운로드 폴더 확인)', 'ok');
-          saveBtn.disabled = false;
-          return;
-        }
-        downloadsPromise.then(function(downloads){
-          if (!downloads) { showStatus('지금은 저장 기능을 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.', 'err'); saveBtn.disabled = false; return; }
-          downloads.save({ filename: filename, data: blob }).then(function(){
-            showStatus('✓ 저장되었습니다.', 'ok');
-            saveBtn.disabled = false;
-          }).catch(function(err){
-            if (err && err.code === 'declined') { showStatus('', ''); }
-            else { showStatus('저장하지 못했습니다: ' + (err && err.message ? err.message : '알 수 없는 오류'), 'err'); }
-            saveBtn.disabled = false;
-          });
+        var payload = {
+          appVersion: 1,
+          savedAt: new Date().toISOString(),
+          num: numInput.value,
+          name: nameInput.value,
+          elements: elements
+        };
+        blob.arrayBuffer().then(function(buf){
+          var pngWithData = embedJsonInPng(new Uint8Array(buf), JSON.stringify(payload));
+          finishSave(new Blob([pngWithData], { type: 'image/png' }));
+        }).catch(function(){
+          // 데이터 삽입에 실패해도(구형 브라우저 등) 그림 저장 자체는 계속 진행한다.
+          finishSave(blob);
         });
       }, 'image/png');
     });
@@ -1639,7 +1765,20 @@
       showSubmitStatus('제출 중…', '');
       withCleanCanvas(function(){
         canvas.toBlob(function(blob){
-          blobToBase64(blob).then(function(base64){
+          var payload = {
+            appVersion: 1,
+            savedAt: new Date().toISOString(),
+            num: num,
+            name: name,
+            elements: elements
+          };
+          blob.arrayBuffer().then(function(buf){
+            return new Blob([embedJsonInPng(new Uint8Array(buf), JSON.stringify(payload))], { type: 'image/png' });
+          }).catch(function(){
+            return blob; // 데이터 삽입 실패 시 원본 PNG로 제출 진행
+          }).then(function(outBlob){
+            return blobToBase64(outBlob);
+          }).then(function(base64){
             return fetch(SUBMIT_URL, {
               method: 'POST',
               // text/plain avoids a CORS preflight that Apps Script web apps
@@ -1722,29 +1861,50 @@
     loadProgressInput.click();
   });
 
+  function applyLoadedProgress(parsed){
+    if (!parsed || !Array.isArray(parsed.elements)) { showProgressStatus('올바른 작업 파일이 아닙니다.', 'err'); return; }
+    elements = parsed.elements.map(function(el){
+      return (el && el.points) ? Object.assign({}, el, { points: el.points.map(function(p){ return { x: p.x, y: p.y }; }) }) : Object.assign({}, el);
+    });
+    totalPoints = 0;
+    elements.forEach(function(el){ if (el.points) totalPoints += el.points.length; });
+    if (parsed.num != null) numInput.value = parsed.num;
+    if (parsed.name != null) nameInput.value = parsed.name;
+    clearSelection();
+    refreshInfo();
+    redraw();
+    showProgressStatus('✓ 이전 작업을 불러왔습니다 (도형 ' + elements.length + '개).', 'ok');
+  }
+
   loadProgressInput.addEventListener('change', function(){
     var file = loadProgressInput.files && loadProgressInput.files[0];
     if (!file) return;
+    var isPng = (file.type === 'image/png') || /\.png$/i.test(file.name || '');
     var reader = new FileReader();
-    reader.onload = function(){
-      var parsed;
-      try { parsed = JSON.parse(String(reader.result)); }
-      catch (err) { showProgressStatus('파일을 읽을 수 없습니다. 저장된 작업 파일(.json)을 선택해 주세요.', 'err'); return; }
-      if (!parsed || !Array.isArray(parsed.elements)) { showProgressStatus('올바른 작업 파일이 아닙니다.', 'err'); return; }
-      elements = parsed.elements.map(function(el){
-        return (el && el.points) ? Object.assign({}, el, { points: el.points.map(function(p){ return { x: p.x, y: p.y }; }) }) : Object.assign({}, el);
-      });
-      totalPoints = 0;
-      elements.forEach(function(el){ if (el.points) totalPoints += el.points.length; });
-      if (parsed.num != null) numInput.value = parsed.num;
-      if (parsed.name != null) nameInput.value = parsed.name;
-      clearSelection();
-      refreshInfo();
-      redraw();
-      showProgressStatus('✓ 이전 작업을 불러왔습니다 (도형 ' + elements.length + '개).', 'ok');
-    };
-    reader.onerror = function(){ showProgressStatus('파일을 읽는 중 문제가 발생했습니다.', 'err'); };
-    reader.readAsText(file);
+    if (isPng) {
+      reader.onload = function(){
+        var jsonText = extractJsonFromPng(new Uint8Array(reader.result));
+        if (!jsonText) {
+          showProgressStatus('이 PNG 파일에는 저장된 작업 데이터가 없습니다. "그림 저장" 버튼으로 새로 저장한 PNG를 선택해 주세요.', 'err');
+          return;
+        }
+        var parsed;
+        try { parsed = JSON.parse(jsonText); }
+        catch (err) { showProgressStatus('PNG 안의 작업 데이터를 읽을 수 없습니다.', 'err'); return; }
+        applyLoadedProgress(parsed);
+      };
+      reader.onerror = function(){ showProgressStatus('파일을 읽는 중 문제가 발생했습니다.', 'err'); };
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.onload = function(){
+        var parsed;
+        try { parsed = JSON.parse(String(reader.result)); }
+        catch (err) { showProgressStatus('파일을 읽을 수 없습니다. 저장된 작업 파일(.json)이나 "그림 저장"으로 내려받은 PNG를 선택해 주세요.', 'err'); return; }
+        applyLoadedProgress(parsed);
+      };
+      reader.onerror = function(){ showProgressStatus('파일을 읽는 중 문제가 발생했습니다.', 'err'); };
+      reader.readAsText(file);
+    }
   });
 
   redraw();
